@@ -1,0 +1,9 @@
+1. curl	ubuntu在线安装		sudo apt-get install libcurl4-nss-dev
+
+2.zlib		官网				http://www.zlib.net/　
+　　
+3.ssl		ubuntu在线安装		sudo apt-get install libzip-dev
+							sudo apt-get install libssl-dev
+
+hcaptcha  
+apt-get install gcc g++ libgd2-xpm-dev libevent-dev libmemcached-dev memcached git

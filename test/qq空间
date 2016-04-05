@@ -1,0 +1,14 @@
+1. 安装对应库curl, zlib, ssl
+
+2.填写config配置文件 (只需要填写一次)
+cookie :QQ空间的登陆cookie;
+post :post请求时的登陆参数(get 请求忽略. 程序判断有无数据来选择本次的操作 post或get);
+url :这一次请求的url;
+
+3.打开main.cpp, 运行httpRequest(其它注释), 填写启动的线程数(不应该超过50);
+
+4.可选择保存本次cookie, 和 响应，和url;
+HttpRequest.cpp  3行见定义。
+默认写入文件是./text.
+
+5.编译make, 执行(如 a.out);
