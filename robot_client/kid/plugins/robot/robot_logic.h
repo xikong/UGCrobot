@@ -86,7 +86,6 @@ class RobotLogic {
     SLBAgent                slb_agent_;
     RouterAgent             router_agent_;
     bool                    is_prase_finsh_;
-    int32                   robot_id_;
 };
 
 } /* namespace robot_logic */

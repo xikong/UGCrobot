@@ -183,7 +183,7 @@ void RobotEngine::StartTaskWork(){
 
     //执行任务
     string str_response;
-//  r = engine->StartTaskWork(task, str_response);
+    r = engine->StartTaskWork(task, str_response);
 
     //任务结果写人日志文件
     WriteLogFile(task, r);
