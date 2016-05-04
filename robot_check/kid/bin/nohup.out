@@ -1,0 +1,5 @@
+INFO [File: ./core.c, Line: 308, Func: core_main, Tid: 140017074878240]: srvt=0xcb5d50
+INFO [File: ./core.c, Line: 331, Func: core_main, Tid: 140017074878240]: get plugins xml success
+INFO [File: ./core.c, Line: 339, Func: core_main, Tid: 140017074878240]: load plugins success
+INFO [File: ./robot_check_logic.cc, Line: 82, Func: Init, Tid: 140017074878240]: config reader.parse error data=
+robot_check.out: ../public/json/json_value.cpp:1136: Json::Value& Json::Value::resolveReference(const char*, bool): Assertion `type_ == nullValue || type_ == objectValue' failed.
