@@ -187,22 +187,12 @@ bool RobotStatePacket::PackStream(void **packet_stream, int32 &packet_stream_len
 bool TaskHead::UnpackTaskHead(packet::DataInPacket *in, int &temp){
 
     this->task_id_ = in->Read64();
-    LOG_MSG2("task_id = %d", this->task_id_);
-
     this->cookie_id_ = in->Read64();
-    LOG_MSG2("cookie_id = %d", this->cookie_id_);
 
     ReadDataByLen(this->cookie_, temp, in);
-    LOG_MSG2("cookie = %s", this->cookie_.c_str());
-
     ReadDataByLen(this->content_, temp, in);
-    LOG_MSG2("content_ = %s", this->content_.c_str());
-
     ReadDataByLen(this->forge_ip_, temp, in);
-    LOG_MSG2("forge_ip_ = %s", this->forge_ip_.c_str());
-
     ReadDataByLen(this->forge_ua_, temp, in);
-    LOG_MSG2("forge_ua_ = %s", this->forge_ua_.c_str());
 
     return true;
 }

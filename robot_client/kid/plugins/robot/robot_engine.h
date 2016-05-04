@@ -18,12 +18,9 @@
 #include "basic/basictypes.h"
 #include "logic/logic_unit.h"
 #include "logic/logic_comm.h"
-#include "logic/task_engine.h"
+#include "task/task_engine.h"
 
 #define TASK_READY  10001
-
-using base_logic::TaskEngine;
-extern TaskEngine *GetTaskEngineByType(const int task_type);
 
 namespace robot_logic {
 
@@ -33,7 +30,7 @@ class RobotEngine {
  private:
     RobotEngine();
     bool Init();
-    bool WriteLogFile(struct TaskHead *task, bool is_success);
+    bool WriteLogFile(struct TaskHead *task, const string &response);
  public:
     virtual ~RobotEngine();
 
@@ -56,7 +53,6 @@ class RobotEngine {
 
     bool FeedBackTaskStatus(struct TaskHead *task, bool is_success);
 
-
  private:
     static RobotEngine  *instance_;
     struct threadrw_t*  lock_;
@@ -65,5 +61,7 @@ class RobotEngine {
 };
 
 } /* namespace robot_logic */
+
+extern base_logic::TaskEngine *GetTaskEngineByType(const int task_type);
 
 #endif /* UGCROBOT_MASTER_PLUGINS_ROBOT_ROBOT_ENGINE_H_ */

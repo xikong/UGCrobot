@@ -69,9 +69,9 @@ enum eServerType{
 };
 
 enum eRobotType{
-    TASK_WEIBO = 7001,                  //微博
-    TASK_TIANYA = 7002,                 //BBS 天涯
-    TASK_TIEBA = 7003,                  //贴吧
+    TASK_TIEBA = 7001,                  //贴吧
+    TASK_WEIBO = 7002,                  //微博
+    TASK_TIANYA = 7003,                 //BBS 天涯
     TASK_QQ = 7004,                     //QQ空间
     TASK_MOP = 7005,                    //maopu
     TASK_DOUBAN = 7006

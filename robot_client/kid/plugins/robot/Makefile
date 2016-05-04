@@ -94,17 +94,20 @@ robot_logic.o : ./robot_logic.cc ./robot_logic.h
 robot_engine.o : ./robot_engine.cc ./robot_engine.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_engine.cc $(INCLUDE_PATHS)
 	
-task_factory.o :  $(USER_DIR)/logic/task_factory.cc
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/task_factory.cc $(INCLUDE_PATHS)
+task_factory.o :  $(USER_DIR)/task/task_factory.cc
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/task/task_factory.cc $(INCLUDE_PATHS)
 
-task_engine.o :  $(USER_DIR)/logic/task_engine.cc $(USER_DIR)/logic/task_engine.h
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/task_engine.cc $(INCLUDE_PATHS)
+task_engine.o :  $(USER_DIR)/task/task_engine.cc $(USER_DIR)/task/task_engine.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/task/task_engine.cc $(INCLUDE_PATHS)
 
 packet_define.o :  $(USER_DIR)/net/packet_define.cc $(USER_DIR)/net/packet_define.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/net/packet_define.cc $(INCLUDE_PATHS)
 	
 packet_processing.o :  $(USER_DIR)/net/packet_processing.cc $(USER_DIR)/net/packet_processing.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/net/packet_processing.cc $(INCLUDE_PATHS)
+	
+logic_pub_comm.o :  $(USER_DIR)/logic/logic_pub_comm.cc $(USER_DIR)/logic/logic_pub_comm.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/logic_pub_comm.cc $(INCLUDE_PATHS)
 	
 logic_unit.o :  $(USER_DIR)/logic/logic_unit.cc $(USER_DIR)/logic/logic_unit.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/logic_unit.cc $(INCLUDE_PATHS)
@@ -144,7 +147,7 @@ zip.o:$(LIB_DIR)/public/basic/zip.cc
 
 
 $(PLUGIN) : robot_init.o  robot_logic.o robot_engine.o packet_processing.o logic_unit.o\
-	task_factory.o task_engine.o packet_define.o \
+	task_factory.o task_engine.o packet_define.o logic_pub_comm.o\
 	mig_log.o basictypes.o basic_util.o config.o \
 	md5sum.o radom_in.o data_packet.o native_library.o tea.o unzip.o zip.o\
 	$(CUSTOM_THIRD_PATH)/dmg_fp/lib/dmg_fp.a $(LIB_DIR)/base/lib/mybase.a $(LIB_DIR)/lib/libhiredis.a

@@ -153,6 +153,7 @@ struct TaskHead{
     string      content_;
     string      forge_ip_;
     string      forge_ua_;
+    string      pre_url_;
 };
 
 //微博任务
@@ -166,7 +167,6 @@ struct TaskWeiBoPacket : public TaskHead{
 //bbs天涯
 struct TaskTianYaPacket : public TaskHead{
     uint64      pre_post_time_;
-    string      pre_url_;
     string      pre_title_;
     string      pre_user_id_;
     string      pre_user_name_;
@@ -176,7 +176,6 @@ struct TaskTianYaPacket : public TaskHead{
 
 //贴吧任务
 struct TaskTieBaPacket : public TaskHead{
-    string      pre_url_;
     string      kw_;
     string      fid_;
     string      tbs_;
@@ -196,7 +195,6 @@ struct TaskQQPacket : public TaskHead{
 
 //猫扑任务
 struct TaskMopPacket : public TaskHead{
-    string      pre_url_;
     string      pCatId_;
     string      catalogId_;
     string      fmtoken_;
@@ -207,7 +205,6 @@ struct TaskMopPacket : public TaskHead{
 
 //豆瓣任务
 struct TaskDouBanPacket : public TaskHead{
-    string      pre_url_;
 
     virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
 };
