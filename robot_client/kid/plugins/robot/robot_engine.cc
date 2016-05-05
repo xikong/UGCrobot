@@ -12,6 +12,7 @@
 #include "basic/basictypes.h"
 #include "basic/template.h"
 #include "basic/scoped_ptr.h"
+#include "logic/logic_pub_comm.h"
 
 #include "robot/robot_logic.h"
 
@@ -38,7 +39,7 @@ bool RobotEngine::Init(){
 
     InitThreadrw(&lock_);
 
-    fp_task_log_ = fopen("./task.log", "w");
+    fp_task_log_ = fopen("./task.log", "a+");
     if(NULL == fp_task_log_){
         LOG_MSG("fopen error task.log");
         return false;
@@ -186,7 +187,7 @@ void RobotEngine::StartTaskWork(){
     r = engine->StartTaskWork(task, str_response);
 
     //任务结果写人日志文件
-    WriteLogFile(task, r);
+    WriteLogFile(task, str_response);
 
     //向服务器反馈任务的状态
     FeedBackTaskStatus(task, r);
@@ -230,15 +231,18 @@ bool RobotEngine::FeedBackTaskStatus(struct TaskHead *task, bool is_success){
     return true;
 }
 
-bool RobotEngine::WriteLogFile(struct TaskHead *task, bool is_success){
+bool RobotEngine::WriteLogFile(struct TaskHead *task, const string &response){
 
-    base_logic::WLockGd lk(lock_);
+    //将日志文件加锁
+    base_logic::WFileLockGd lk(fp_task_log_);
 
     //组合日志
     std::stringstream os;
-    os << "task_id = " << task->task_id_ << "   ";
-    os << "task_type = " << task->task_type_ << "\n";
-    os << "is_success = \n" << is_success << "\n\n";
+    os << "task_id = " << task->task_id_ << ",  ";
+    os << "task_type = " << task->task_type_ << ", \n";
+    os << "task_referer = " << task->pre_url_ << ", \n";
+    os << "task_content = " << task->content_ << ", \n";
+    os << "response = \n " << response << "\n\n";
 
     //将任务信息写到日志中
     string str_log = os.str();
@@ -249,6 +253,5 @@ bool RobotEngine::WriteLogFile(struct TaskHead *task, bool is_success){
 
     fflush(fp_task_log_);
 }
-
 
 } /* namespace robot_logic */

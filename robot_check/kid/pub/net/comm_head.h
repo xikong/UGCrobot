@@ -5,7 +5,7 @@
 #include <list>
 #include <string>
 
-#include "logic/logic_comm.h"
+#include "../logic/logic_pub_comm.h"
 #include "basic/basictypes.h"
 #include "net/packet_processing.h"
 

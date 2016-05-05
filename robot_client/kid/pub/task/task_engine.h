@@ -40,7 +40,7 @@ class TaskEngine {
 
     static size_t ReadResponse(void* buffer, size_t size, size_t member, void* res);
 
-    bool FindStrFromString(string &find, const string src,
+    bool FindStrFromString(string &find, const string &src,
             const string start, const char end);
 
 };

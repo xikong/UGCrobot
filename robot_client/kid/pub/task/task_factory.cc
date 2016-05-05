@@ -10,7 +10,7 @@
 
 using namespace base_logic;
 
-TaskEngine *GetTaskEngineByType(const int task_type){
+extern TaskEngine *GetTaskEngineByType(const int task_type){
 
     TaskEngine *engine = NULL;
 

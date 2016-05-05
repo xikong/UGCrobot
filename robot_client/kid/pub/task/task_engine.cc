@@ -13,21 +13,43 @@ namespace base_logic {
 
 bool TaskEngine::StartTaskWork(struct TaskHead *task, string &str_response){
 
+    if(NULL == task){
+        return false;
+    }
+
+    bool r = false;
+
     //获取伪造的ip
     string forgery_ip;
     FindStrFromString(forgery_ip, task->forge_ip_, "", ':');
-    LOG_MSG2("FindStrFromString forgery_ip = %s", forgery_ip.c_str());
     task->forge_ip_ = forgery_ip;
 
     //构造提交参数, url, referer等
     string str_url, str_post, str_referer;
-    this->HandlerPostArg(task, str_url, str_post, str_referer);
+    r = this->HandlerPostArg(task, str_url, str_post, str_referer);
+    if(!r){
+        LOG_MSG2("task_type = %d, task_id = %d, HandlerPostArg Failed",
+                task->task_type_, task->task_id_);
+        return false;
+    }
 
     //提交curl
-    SendHttpRequestCurl(task, str_url, str_post, str_referer, str_response);
+    r = SendHttpRequestCurl(task, str_url, str_post, str_referer, str_response);
+    if(!r){
+        LOG_MSG2("task_type = %d, task_id = %d, SendHttpRequestCurl Failed",
+                task->task_type_, task->task_id_);
+        return false;
+    }
 
     //判断执行结果
-    return this->JudgeResultByResponse(str_response);
+    r = this->JudgeResultByResponse(str_response);
+    if(!r){
+        LOG_MSG2("task_type = %d, task_id = %d, JudgeResultByResponse Failed",
+                task->task_type_, task->task_id_);
+        return false;
+    }
+
+    return true;
 }
 
 bool TaskEngine::SendHttpRequestCurl(struct TaskHead *task, string &url,
@@ -41,7 +63,7 @@ bool TaskEngine::SendHttpRequestCurl(struct TaskHead *task, string &url,
 
         //如果UA为空，使用默认的UA
         if(task->forge_ua_.empty()){
-            task->forge_ua_ = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.112 Safari/537.36";
+            task->forge_ua_ = "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0";
         }
 
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 0);
@@ -51,17 +73,15 @@ bool TaskEngine::SendHttpRequestCurl(struct TaskHead *task, string &url,
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1); //跳转  301  302
         curl_easy_setopt(curl, CURLOPT_HEADER, 0);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, task->forge_ua_.c_str());
-        curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "./cookie.txt");
-        curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "./cookie.txt");
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10); // 接收超时时间
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5); // 接收超时时间
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
         curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
 
         if (!str_postarg.empty()) {
             curl_easy_setopt(curl, CURLOPT_POST, true);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, str_postarg.c_str());
-            LOG_MSG2("post_data = %s \n", str_postarg.c_str());
+            LOG_MSG2("post_data = %s", str_postarg.c_str());
         }
 
         headers = curl_slist_append(headers, "Cache-Control: max-age=0");
@@ -74,11 +94,12 @@ bool TaskEngine::SendHttpRequestCurl(struct TaskHead *task, string &url,
         headers = curl_slist_append(headers, task->cookie_.c_str());
 
         //伪造UA
-        string str_ua = "User-Agent: " + task->forge_ua_;
-        headers = curl_slist_append(headers, str_ua.c_str());
+        task->forge_ua_ = "User-Agent: " + task->forge_ua_;
+        headers = curl_slist_append(headers, task->forge_ua_.c_str());
 
         //伪造ip
         if(!task->forge_ip_.empty()){
+            LOG_MSG2("fore_ip = %s", task->forge_ip_.c_str());
             task->forge_ip_ = "REMOTE_ADDR: " + task->forge_ip_ + ", X-Forwarded-For: " + task->forge_ip_;
             headers = curl_slist_append(headers, task->forge_ip_.c_str());
         }
@@ -112,20 +133,20 @@ size_t TaskEngine::ReadResponse(void* buffer, size_t size, size_t member, void* 
     return ressize;
 }
 
-bool TaskEngine::FindStrFromString(string &find, const string src,
+bool TaskEngine::FindStrFromString(string &find, const string &src,
         const string start, const char end){
 
-    find = "";
-
-    //检查要查找的字符串中有没有起始字符串
-    std::size_t ret = src.find(start);
-    if(ret == string::npos){
-        return false;
+    std::size_t ret = 0;
+    if(!start.empty()){
+        //检查要查找的字符串中有没有起始字符串
+        ret = src.find(start);
+        if(ret == string::npos){
+            return false;
+        }
     }
 
-    ret = ret + start.size();
-
     //获取查找字符串之后的字符串
+    ret = ret + start.size();
     string end_str = src.substr(ret);
 
     //如果要找到末尾，直接返回
@@ -346,24 +367,47 @@ bool TaskTieBaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
         return false;
     }
 
+    //获取tbs
+    string str_tbs;
+    r = FindStrFromString(str_tbs, tieba_task->cookie_, "", ';');
+    if(!r){
+        LOG_MSG2("FindStrFromString TieBa tbs = %s failed", str_tbs.c_str());
+        return false;
+    }
+
     //组装post语句
     std::stringstream os;
+
     if(tieba_task->repost_id_.empty()){
-        os << "ie=utf-8&vcode_md5=&rich_text=1&files=%5B%5D&mouse_pwd=";
-        os << "&mouse_pwd_t=1461135102500&mouse_pwd_isclick=0&__type__=reply";
+        //固定参数
+        os << "ie=utf-8&vcode_md5=&rich_text=1&files=%5B%5D&mouse_pwd=&mouse_pwd_isclick=0&__type__=reply";
+        os << "&mouse_pwd_t=" << logic::SomeUtils::GetCurrentTime();
     }else{
         //固定参数
-        os << "ie=utf-8&rich_text=1&content=en&lp_type=0&lp_sub_type=0&new_vcode=1&tag=11&anonymous=0";
+        os << "ie=utf-8&rich_text=1&lp_type=0&lp_sub_type=0&new_vcode=1&tag=11&anonymous=0";
         os << "&quote_id=" << tieba_task->repost_id_;
         os << "&repostid=" << tieba_task->repost_id_;
     }
 
+    // 默认回2楼
+    if( tieba_task->floor_num_ < 0){
+        tieba_task->floor_num_ = 1;
+    }
+
+    tieba_task->floor_num_ += 1;
     os << "&kw=" << tieba_task->kw_;
     os << "&fid=" << tieba_task->fid_;
     os << "&tid=" << str_tid;
     os << "&floor_num=" << tieba_task->floor_num_;
-    os << "&tbs=" << tieba_task->tbs_;
+    os << "&" << str_tbs;
     os << "&content=" << tieba_task->content_;
+
+    LOG_MSG2("referer = %s", tieba_task->pre_url_.c_str());
+    LOG_MSG2("cookie = %s", tieba_task->cookie_.c_str());
+    LOG_MSG2("kw = %s", tieba_task->kw_.c_str());
+    LOG_MSG2("fid = %s", tieba_task->fid_.c_str());
+    LOG_MSG2("tid = %s", str_tid.c_str());
+    LOG_MSG2("%s", str_tbs.c_str());
 
     //post参数
     str_postarg = os.str();

@@ -33,7 +33,7 @@ CXXFLAGS += -g  -Wextra -pthread -shared -fPIC
 
 # All tests produced by this Makefile.  Remember to add new tests you
 # created to the list.
-PLUGIN = $(SO_DIR)/robot/robot.so
+PLUGIN = $(SO_DIR)/robot_check/robot_check.so
                 
 INCLUDE_PATHS = -I/usr/local/libmemcached-1.0.7/include \
 				-I$(LIB_DIR) \
@@ -85,14 +85,14 @@ clean :
 # function.
 
 
-robot_init.o : ./robot_init.cc ./robot_init.h
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_init.cc $(INCLUDE_PATHS)
+robot_check_init.o : ./robot_check_init.cc ./robot_check_init.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_check_init.cc $(INCLUDE_PATHS)
 	
-robot_logic.o : ./robot_logic.cc ./robot_logic.h
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_logic.cc $(INCLUDE_PATHS)
+robot_check_logic.o : ./robot_check_logic.cc ./robot_check_logic.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_check_logic.cc $(INCLUDE_PATHS)
 	
-robot_engine.o : ./robot_engine.cc ./robot_engine.h
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_engine.cc $(INCLUDE_PATHS)
+robot_check_engine.o : ./robot_check_engine.cc ./robot_check_engine.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_check_engine.cc $(INCLUDE_PATHS)
 	
 task_factory.o :  $(USER_DIR)/task/task_factory.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/task/task_factory.cc $(INCLUDE_PATHS)
@@ -105,7 +105,7 @@ packet_define.o :  $(USER_DIR)/net/packet_define.cc $(USER_DIR)/net/packet_defin
 	
 packet_processing.o :  $(USER_DIR)/net/packet_processing.cc $(USER_DIR)/net/packet_processing.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/net/packet_processing.cc $(INCLUDE_PATHS)
-	
+
 logic_pub_comm.o :  $(USER_DIR)/logic/logic_pub_comm.cc $(USER_DIR)/logic/logic_pub_comm.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/logic_pub_comm.cc $(INCLUDE_PATHS)
 	
@@ -146,7 +146,7 @@ zip.o:$(LIB_DIR)/public/basic/zip.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(LIB_DIR)/public/basic/zip.cc $(INCLUDE_PATHS)
 
 
-$(PLUGIN) : robot_init.o  robot_logic.o robot_engine.o packet_processing.o logic_unit.o\
+$(PLUGIN) : robot_check_init.o robot_check_logic.o robot_check_engine.o packet_processing.o logic_unit.o\
 	task_factory.o task_engine.o packet_define.o logic_pub_comm.o\
 	mig_log.o basictypes.o basic_util.o config.o \
 	md5sum.o radom_in.o data_packet.o native_library.o tea.o unzip.o zip.o\

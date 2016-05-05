@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin id="robot_check"
+        name="robot_check"
+        version="1.0.0"
+        provider-name="Harvey">
+</plugin>
