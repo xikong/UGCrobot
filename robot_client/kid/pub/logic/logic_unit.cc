@@ -170,15 +170,10 @@ int SomeUtils::GetPortBySocket(const int socket, int16 &port){
 
 std::string SomeUtils::GetLocalTime(const time_t current_time){
 
-    struct tm *ptm = localtime(&current_time);
-    if(NULL == ptm){
-        return "";
-    }
+    char tmp[64];
+    strftime( tmp, sizeof(tmp), "%Y/%m/%d %H:%M:%S", localtime(&current_time) );
 
-    char buf[64];
-    sprintf(buf, "%02d:%02d:%02d", ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
-
-    std::string time(buf);
+    std::string time(tmp);
 
     return time;
 }

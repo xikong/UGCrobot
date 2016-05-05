@@ -26,7 +26,7 @@ namespace robot_logic {
 RobotLogic *RobotLogic::instance_ = NULL;
 
 RobotLogic::RobotLogic()
-:is_prase_finsh_(false){
+ :is_prase_finsh_(false) {
 
     //初始化读写锁
     InitThreadrw(&lock_);
@@ -114,12 +114,8 @@ bool RobotLogic::InitConfig(){
         delete[] parg;
     }
     catch(std::string &ex){
-        if(NULL != fp){
-            fclose(fp);
-        }
-
-        LOG_MSG("catch=");
-        LOG_MSG2("%s", ex.c_str());
+        fclose(fp);
+        LOG_MSG2("catch= %s", ex.c_str());
     }
 
     fclose(fp);

@@ -53,6 +53,8 @@ class RobotEngine {
 
     bool FeedBackTaskStatus(struct TaskHead *task, bool is_success);
 
+    void Test();
+
  private:
     static RobotEngine  *instance_;
     struct threadrw_t*  lock_;
