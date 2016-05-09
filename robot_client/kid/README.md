@@ -1,7 +1,5 @@
 ﻿# 机器人回帖各平台说明
 
-[TOC]
-
 ---
 
 目前支持回帖平台如下：
@@ -12,8 +10,6 @@
 关于通信协议见wiki说明：
 
 ## [机器人回帖wiki通信协议](http://wiki.smartdata-x.com/index.php/PluginsSvcRobotTask)
-
----
 
 ## 各平台回帖参数格式
 
@@ -26,6 +22,7 @@
 | fid       | string |  帖子唯一id |
 | floor_num | int32  |  回复楼层（若回复楼中楼需要） |
 | repost_id | string |  回复楼层对应的唯一id |
+
 
 ### 2. 淘股吧
 
