@@ -238,7 +238,7 @@ bool TaskQQEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     str_postarg = os.str();
 }
 
-bool TaskQQEngine::JudgeResultByResponse(const string response){
+bool TaskQQEngine::JudgeResultByResponse(string &response){
 
     string code_num;
     FindStrFromString(code_num, response, "\"code\":", ',');
@@ -337,7 +337,7 @@ bool TaskTianYaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     return true;
 }
 
-bool TaskTianYaEngine::JudgeResultByResponse(const string response){
+bool TaskTianYaEngine::JudgeResultByResponse(string &response){
 
     string code_num;
     FindStrFromString(code_num, response, "{\"success\":\"", '"');
@@ -421,7 +421,7 @@ bool TaskTieBaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     return true;
 }
 
-bool TaskTieBaEngine::JudgeResultByResponse(const string response){
+bool TaskTieBaEngine::JudgeResultByResponse(string &response){
 
     string code_num;
     FindStrFromString(code_num, response, "{\"no\":", ',');
@@ -475,7 +475,7 @@ bool TaskWeiBoEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     return true;
 }
 
-bool TaskWeiBoEngine::JudgeResultByResponse(const string response){
+bool TaskWeiBoEngine::JudgeResultByResponse(string &response){
 
     string code_num;
     FindStrFromString(code_num, response, "{\"code\":\"", '"');
@@ -520,7 +520,7 @@ bool TaskMopEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     return true;
 }
 
-bool TaskMopEngine::JudgeResultByResponse(const string response){
+bool TaskMopEngine::JudgeResultByResponse(string &response){
 
     string code_num;
     FindStrFromString(code_num, response, "isSuccess\":", ',');
@@ -564,9 +564,51 @@ bool TaskDouBanEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     return true;
 }
 
-bool TaskDouBanEngine::JudgeResultByResponse(const string response){
+bool TaskDouBanEngine::JudgeResultByResponse(string &response){
 
     if(response.find("页面不存在") == string::npos){
+        return false;
+    }
+
+    return true;
+}
+
+TaskTaoGuBaEngine *TaskTaoGuBaEngine::instance_ = NULL;
+bool TaskTaoGuBaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
+            string &str_postarg, string &str_referer){
+
+    struct TaskTaoGuBaPacket *task_taoguba = (struct TaskTaoGuBaPacket *)task;
+    if(NULL == task_taoguba){
+        return false;
+    }
+
+    std::stringstream os;
+
+    //固定参数
+    os << "firstFlag=Y&quoteContent=&quoteUserID=&quoteUserName=&stockName1=&recommondStokLsit=&stockName2=&recommondStokLsit=&stockName3=&recommondStokLsit=";
+
+    os << "&subject=" << task_taoguba->subject_;
+    os << "&topicID=" << task_taoguba->topicID_;
+    os << "&body=" << task_taoguba->content_;
+    str_postarg = os.str();
+
+    str_referer = "http://www.taoguba.com.cn/Article/" + task_taoguba->topicID_ + "/1";
+    task_taoguba->pre_url_ = str_referer;
+
+    str_url = "http://www.taoguba.com.cn/addReply";
+
+    return true;
+}
+
+bool TaskTaoGuBaEngine::JudgeResultByResponse(string &response){
+
+    if( response.find("今天发布数量已超过上限，请明天再发，谢谢") ){
+        response = "今天发布数量已超过上限，请明天再发，谢谢";
+        return false;
+    }
+
+    if( response.find("错误页面_淘股吧") == string::npos ){
+        response = "错误页面_淘股吧";
         return false;
     }
 

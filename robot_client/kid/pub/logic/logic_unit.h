@@ -9,7 +9,7 @@
 #include <time.h>
 #include "basic/basictypes.h"
 #include "basic/native_library.h"
-#include "../../library/core/common.h"
+#include "core/common.h"
 #include "basic/basic_util.h"
 #include "net/packet_processing.h"
 #include "net/comm_head.h"

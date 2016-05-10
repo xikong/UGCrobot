@@ -209,6 +209,15 @@ struct TaskDouBanPacket : public TaskHead{
     virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
 };
 
+//淘股吧
+struct TaskTaoGuBaPacket : public TaskHead{
+
+    string      topicID_;
+    string      subject_;
+
+    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
+};
+
 //收到服务器分配的任务
 struct MultiTaskList : public PacketHead{
 

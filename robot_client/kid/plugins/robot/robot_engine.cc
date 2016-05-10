@@ -13,6 +13,7 @@
 #include "basic/template.h"
 #include "basic/scoped_ptr.h"
 #include "logic/logic_pub_comm.h"
+#include "logic/logic_unit.h"
 
 #include "robot/robot_logic.h"
 
@@ -65,7 +66,7 @@ bool RobotEngine::PushNewTaskInQueue(struct TaskHead *task){
     base_logic::WLockGd lk(lock_);
     g_ready_task_queue_.push(task);
 
-    LOG_MSG2("Add New Task In Queue, task_id = %u, task_type = %d, curr_task_num = %d",
+    LOG_DEBUG2("Add New Task In Queue, task_id = %u, task_type = %d, curr_task_num = %d",
             task->task_id_, task->task_type_, g_ready_task_queue_.size());
 
     //通知线程去处理
@@ -238,11 +239,12 @@ bool RobotEngine::WriteLogFile(struct TaskHead *task, const string &response){
 
     //组合日志
     std::stringstream os;
-    os << "task_id = " << task->task_id_ << ",  ";
+    os << logic::SomeUtils::GetLocalTime(time(NULL)) << ", ";
+    os << "task_id = " << task->task_id_ << ", ";
     os << "task_type = " << task->task_type_ << ", \n";
     os << "task_referer = " << task->pre_url_ << ", \n";
     os << "task_content = " << task->content_ << ", \n";
-    os << "response = \n " << response << "\n\n";
+    os << "response = " << response << "\n\n";
 
     //将任务信息写到日志中
     string str_log = os.str();
@@ -252,6 +254,36 @@ bool RobotEngine::WriteLogFile(struct TaskHead *task, const string &response){
     }
 
     fflush(fp_task_log_);
+}
+
+void RobotEngine::Test(){
+
+    struct TaskTaoGuBaPacket *task = new struct TaskTaoGuBaPacket;
+
+    task->task_id_ = 1;
+    task->task_type_ = TASK_TAOGUBA;
+
+    task->content_ = "不错";
+    task->topicID_ = "1473659";
+    task->subject_ = "商人的几个类型与商业的几个模式";
+    task->cookie_ = "JSESSIONID=2F2D6FC9062DAEA5D0B46ACA6D539E04-n1; CNZZDATA1574657=cnzz_eid%3D1151724852-1462413656-http%253A%252F%252Fwww.baidu.com%252F%26ntime%3D1462413656; tgbuser=1693199; tgbpwd=401069A9724aud51rvfq2rzrxh; bdshare_firstime=1462417196359";
+
+//贴吧
+#if 0
+    struct TaskTieBaPacket *task = new struct TaskTieBaPacket;
+
+    task->task_id_ = 1;
+    task->task_type_ = TASK_TIEBA;
+
+    task->pre_url_ = "http://tieba.baidu.com/p/4521147288";
+    task->kw_ = "htcx9";
+    task->fid_ = "21618411";
+    task->content_ = "不错";
+
+    task->cookie_ = "tbs=71c1877d94e08c5e1462258768;BAIDUID=092C32B642E358C256261F8CCC33B3E7:FG=1; BDUSS=B-cXlMb0c0bWRieTFwUHE4TVVMWE5rUDl-QjRoVzdWenRoaFh6aW5FRlEyVTlYQVFBQUFBJCQAAAAAAAAAAAEAAAAWyMKBbHR6bnA3MTU3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFBMKFdQTChXeF; BIDUPSID=092C32B642E358C256261F8CCC33B3E7; H_PS_PSSID=18880_18286_1424_19782_17944_19805_19900_19559_19807_19843_19901_18134_17001_15540_11503_10634; PSTM=1462258767; HISTORY=213f20f52d8bf07c04ab5732fab36fee721748; HOSUPPORT=1; PTOKEN=e6602542d18203454b19d23798c17f7f; SAVEUSERID=1109a219a93d862ac01ce9c8dac65b; STOKEN=0005e74cc3d51fe39c427f309616e749cf95059e4d8c9614d374cf6f3183e8d2; UBI=fi_PncwhpxZ%7ETaJczCAqA7NWC58pA1B%7EtUdrF1wxzXKaI9hPoHEoJwYtUM43Xfhn1NyESfr5WbJzRah7-bBa9upeuaVarXbVbmI7Cj7xXdc7QvbQt066an7cxW4uOromnwF76MGolHVH-AdbpswwDMG1IvFww__; USERNAMETYPE=3; TIEBAUID=a320d01d2ee5262b877d6fbf; TIEBA_USERTYPE=f6f1ec33f1ac043f8929cf55; BDSVRTM=0; BD_HOME=0;";
+#endif
+
+    PushNewTaskInQueue(task);
 }
 
 } /* namespace robot_logic */

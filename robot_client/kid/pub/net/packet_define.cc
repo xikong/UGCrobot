@@ -268,6 +268,16 @@ bool TaskDouBanPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp){
     return true;
 }
 
+bool TaskTaoGuBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp){
+
+    this->UnpackTaskHead(in, temp);
+
+    ReadDataByLen(this->topicID_, temp, in);
+    ReadDataByLen(this->subject_, temp, in);
+
+    return true;
+}
+
 bool MultiTaskList::UnpackStream(const void *packet_stream, int32 len){
 
     this->UnpackHead(packet_stream, len);
@@ -315,6 +325,12 @@ bool MultiTaskList::UnpackStream(const void *packet_stream, int32 len){
         }
         case TASK_DOUBAN:{
             struct TaskDouBanPacket *task_temp = new struct TaskDouBanPacket;
+            task_temp->UnpackTaskBody(this->in_, temp);
+            task = (struct TaskHead *)task_temp;
+            break;
+        }
+        case TASK_TAOGUBA:{
+            struct TaskTaoGuBaPacket *task_temp = new struct TaskTaoGuBaPacket;
             task_temp->UnpackTaskBody(this->in_, temp);
             task = (struct TaskHead *)task_temp;
             break;

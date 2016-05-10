@@ -74,7 +74,8 @@ enum eRobotType{
     TASK_TIANYA = 7003,                 //BBS 天涯
     TASK_QQ = 7004,                     //QQ空间
     TASK_MOP = 7005,                    //maopu
-    TASK_DOUBAN = 7006
+    TASK_DOUBAN = 7006,                 //豆瓣
+    TASK_TAOGUBA = 7007
 };
 
 enum eForgeryType{

@@ -33,7 +33,7 @@ class TaskEngine {
     virtual bool HandlerPostArg(struct TaskHead *task, string &str_url,
             string &str_postarg, string &str_referer) = 0;
 
-    virtual bool JudgeResultByResponse(const string response) = 0;
+    virtual bool JudgeResultByResponse(string &response) = 0;
 
     bool SendHttpRequestCurl(struct TaskHead *task, string &str_url,
             string &str_postarg, string &str_referer, string &str_response);
@@ -61,7 +61,7 @@ class TaskQQEngine : public TaskEngine {
     virtual bool HandlerPostArg(struct TaskHead *task, string &str_url,
             string &str_postarg, string &str_referer);
 
-    virtual bool JudgeResultByResponse(const string response);
+    virtual bool JudgeResultByResponse(string &response);
 
  private:
     bool GetQQGtkByCookie(string &str_gtk, const string cookie);
@@ -87,7 +87,7 @@ class TaskTianYaEngine : public TaskEngine{
     virtual bool HandlerPostArg(struct TaskHead *task, string &str_url,
             string &str_postarg, string &str_referer);
 
-    virtual bool JudgeResultByResponse(const string response);
+    virtual bool JudgeResultByResponse(string &response);
 
  private:
     static TaskTianYaEngine *instance_;
@@ -110,7 +110,7 @@ class TaskTieBaEngine : public TaskEngine{
     virtual bool HandlerPostArg(struct TaskHead *task, string &str_url,
             string &str_postarg, string &str_referer);
 
-    virtual bool JudgeResultByResponse(const string response);
+    virtual bool JudgeResultByResponse(string &response);
 
  private:
     static TaskTieBaEngine  *instance_;
@@ -133,7 +133,7 @@ class TaskWeiBoEngine : public TaskEngine{
     virtual bool HandlerPostArg(struct TaskHead *task, string &str_url,
             string &str_postarg, string &str_referer);
 
-    virtual bool JudgeResultByResponse(const string response);
+    virtual bool JudgeResultByResponse(string &response);
 
  private:
     static TaskWeiBoEngine *        instance_;
@@ -156,7 +156,7 @@ class TaskMopEngine : public TaskEngine{
     virtual bool HandlerPostArg(struct TaskHead *task, string &str_url,
             string &str_postarg, string &str_referer);
 
-    virtual bool JudgeResultByResponse(const string response);
+    virtual bool JudgeResultByResponse(string &response);
 
  private:
     static TaskMopEngine *instance_;
@@ -180,10 +180,35 @@ class TaskDouBanEngine : public TaskEngine{
     virtual bool HandlerPostArg(struct TaskHead *task, string &str_url,
             string &str_postarg, string &str_referer);
 
-    virtual bool JudgeResultByResponse(const string response);
+    virtual bool JudgeResultByResponse(string &response);
 
  private:
     static TaskDouBanEngine *instance_;
+};
+
+class TaskTaoGuBaEngine : public TaskEngine{
+
+ public:
+    static TaskTaoGuBaEngine *GetInstance(){
+        if(NULL == instance_){
+            instance_ = new TaskTaoGuBaEngine();
+        }
+        return instance_;
+    }
+
+    static void FreeInstance(){
+        delete instance_;
+        instance_ = NULL;
+    }
+
+    virtual bool HandlerPostArg(struct TaskHead *task, string &str_url,
+            string &str_postarg, string &str_referer);
+
+    virtual bool JudgeResultByResponse(string &response);
+
+ private:
+    static TaskTaoGuBaEngine *instance_;
+
 };
 
 } /* namespace base_logic */
