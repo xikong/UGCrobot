@@ -129,19 +129,12 @@ void TaskSchdulerManager::SetContent(const base_logic::RobotTaskContent &con) {
 void TaskSchdulerManager::FetchBatchTask(
 		std::list<base_logic::RobotTask *> *list, bool is_first) {
 	base_logic::WLockGd lk(lock_);
-	int affected_rows = 0;
 	base_logic::ForgeryUA ua;
 	time_t current_time = time(NULL);
 	ua_cache_->SortUABySendTime();
 	while ((*list).size() > 0) {
 		base_logic::RobotTask *info = (*list).front();
 		(*list).pop_front();
-		task_db_->ExistRobotTask(info, affected_rows);
-		if (affected_rows > 0) {
-			LOG_MSG2("the task has exec success, type: %d, url: %s",
-					info->type(), info->url().c_str());
-			continue;
-		}
 		ua_cache_->GetUA(ua);
 		info->set_ua(ua);
 		task_cache_->task_idle_map_[info->id()] = info;
@@ -252,6 +245,8 @@ bool TaskSchdulerManager::DistributionTask() {
 			bool send_success = crawler_schduler_engine_->SendOptimalRouter(
 					(const void*) &tasks, 0, crawler_type);
 			if (!send_success) {
+				LOG_DEBUG2("packet_start ~ it size: %d",
+						std::distance(packet_start, it));
 				for (; packet_start != it; ++packet_start) {
 					base_logic::RobotTask *task = packet_start->second;
 					task->set_state(TASK_SEND_FAILED);
@@ -269,6 +264,8 @@ bool TaskSchdulerManager::DistributionTask() {
 		bool send_success = crawler_schduler_engine_->SendOptimalRouter((const void*) &tasks, 0,
 				crawler_type);
 		if (!send_success) {
+			LOG_DEBUG2("packet_start ~ packet_start size: %d",
+					std::distance(packet_start, it));
 			for (; packet_start != it; ++packet_start) {
 				base_logic::RobotTask *task = packet_start->second;
 				task->set_state(TASK_SEND_FAILED);
@@ -287,7 +284,7 @@ bool TaskSchdulerManager::DistributionTask() {
 		} else if (TASK_SEND == task->state()) {
 			task_cache_->task_exec_map_[task->id()] = task;
 			task_cache_->task_idle_map_.erase(it++);
-		} else if (TASK_SEND_FAILED == task->state()) {
+		} else {
 			++it;
 		}
 	}

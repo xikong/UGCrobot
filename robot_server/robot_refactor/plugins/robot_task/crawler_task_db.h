@@ -32,7 +32,7 @@ class CrawlerTaskDB {
 
     bool UpdateRobotTaskDetail(base_logic::RobotTask *task);
 
-    bool RecordRobotTasks(const std::list<base_logic::RobotTask *> &list);
+    bool RecordRobotTasks(std::list<base_logic::RobotTask *> &list);
 
     bool UpdateRobotTaskState(int64 task_id, int state, std::string error_code = "none");
 

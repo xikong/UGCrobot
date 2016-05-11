@@ -192,6 +192,7 @@ void RobotTask::SetTaskPacketUnit(RobotTaskBase *task) {
 	task->task_id = id_;
 	task->task_type = type_;
 	task->cookie_id = cookie_.cookie_id();
+	task->cookie = cookie_.get_cookie_body();
 	task->ua = ua_.ua();
 	task->addr = ip_.ip();
 	task->content = content_.content();
@@ -199,9 +200,7 @@ void RobotTask::SetTaskPacketUnit(RobotTaskBase *task) {
 
 std::string RobotTask::SerializeSelf() {
 	std::stringstream os;
-	os << "id: " << id_ << ", type:" << type_ << ", create_time: "
-			<< create_time_ << ", send_time: " << send_time_
-			<< ", url: " << url_;
+	os << "type:" << type_ << ", url: " << url_;
 	return os.str();
 }
 
@@ -211,9 +210,11 @@ void TiebaTask::GetDataFromKafka(base_logic::DictionaryValue* dict) {
 	dict->GetString(L"kw", &kw_);
 	dict->GetString(L"fid", &fid_);
 	dict->GetString(L"tbs", &tbs_);
-	int64 tmp;
-	dict->GetBigInteger(L"floor_num", &tmp);
-	floor_num_ = tmp;
+	std::string tmp;
+	int64 i64;
+	dict->GetString(L"floor_num", &tmp);
+	base::BasicUtil::StringUtil::StringToInt64(tmp, &i64);
+	floor_num_ = i64;
 	dict->GetString(L"repostid", &repost_id_);
 }
 
@@ -241,9 +242,7 @@ void TiebaTask::SetTaskPacketUnit(RobotTaskBase *task) {
 std::string TiebaTask::SerializeSelf() {
 	std::stringstream os;
 	os << RobotTask::SerializeSelf();
-	os << ", kw: " << kw_ << ", fid: " << fid_ <<
-			", tbs: " << tbs_ << ", floor_num: " << floor_num_
-			<< ", repost_id: " << repost_id_;
+	os << ", repost_id: " << repost_id_;
 	return os.str();
 
 }

@@ -69,7 +69,7 @@ class CookieCache {
 			platform.cur_it = platform.list.begin();
 		cookie = *platform.cur_it;
 		if ((cookie.send_last_time() + 1800) > current_time) {
-			LOG_MSG("cookie use to often");
+			LOG_MSG("cookie use too often");
 			return false;
 		}
 		++platform.cur_it;

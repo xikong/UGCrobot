@@ -98,7 +98,7 @@ bool CrawlerTaskDB::ExistRobotTask(base_logic::RobotTask *task, int &affected_ro
     scoped_ptr<base_logic::DictionaryValue> dict(
                     new base_logic::DictionaryValue());
     std::stringstream os;
-    os << "call proc_ExistRobotTask(" << (int)(task->type()) << ",\'" << task->url() << "\'," << (int)TASK_SUCCESS <<")";
+    os << "call proc_ExistRobotTask(\'" << task->SerializeSelf() << "\')";
     std::string sql = os.str();
 
     base_logic::ListValue* listvalue;
@@ -325,31 +325,33 @@ void CrawlerTaskDB::CallBackFectchBatchForgeryIP(void* param,
 }
 
 bool CrawlerTaskDB::RecordRobotTaskState(base_logic::RobotTask *task) {
-    bool r = false;
-    scoped_ptr<base_logic::DictionaryValue> dict(
-                new base_logic::DictionaryValue());
-    std::string sql;
-    std::stringstream os;
-    os << "call proc_RecordTaskState(" << task->type() << ",\'" << task->url() << "\', " << task->state() << ")";
-    sql = os.str();
-    base_logic::ListValue* listvalue;
-    dict->SetString(L"sql", sql);
-    r = mysql_engine_->ReadData(0, (base_logic::Value*)(dict.get()),
-    		CallBackGetTaskId);
-    if (!r)
-        return false;
-    dict->GetList(L"resultvalue", &listvalue);
+	bool r = false;
+	scoped_ptr<base_logic::DictionaryValue> dict(
+			new base_logic::DictionaryValue());
+	std::string sql;
+	std::stringstream os;
+	os << "call proc_RecordTaskState(" << task->type() << ",\'" << task->url()
+			<< "\', \'" << task->SerializeSelf() << "\', " << task->state()
+			<< ")";
+	sql = os.str();
+	base_logic::ListValue* listvalue;
+	dict->SetString(L"sql", sql);
+	r = mysql_engine_->ReadData(0, (base_logic::Value*) (dict.get()),
+			CallBackGetTaskId);
+	if (!r)
+		return false;
+	dict->GetList(L"resultvalue", &listvalue);
 	while (listvalue->GetSize()) {
 		base_logic::Value* result_value;
 		listvalue->Remove(0, &result_value);
 		base_logic::DictionaryValue* dict_result_value =
-			(base_logic::DictionaryValue*)(result_value);
+				(base_logic::DictionaryValue*) (result_value);
 		task->GetTaskId(dict_result_value);
 //		task.set_type(MAIN_LASTING_TASK);
 		delete dict_result_value;
 		dict_result_value = NULL;
 	}
-    return true;
+	return true;
 }
 
 bool CrawlerTaskDB::UpdateRobotTaskDetail(base_logic::RobotTask *task) {
@@ -368,11 +370,21 @@ bool CrawlerTaskDB::UpdateRobotTaskDetail(base_logic::RobotTask *task) {
     return mysql_engine_->WriteData(0, (base_logic::Value*)(dict.get()));
 }
 
-bool CrawlerTaskDB::RecordRobotTasks(const std::list<base_logic::RobotTask *> &list) {
+bool CrawlerTaskDB::RecordRobotTasks(std::list<base_logic::RobotTask *> &list) {
 	bool r = true;
-	std::list<base_logic::RobotTask *>::const_iterator it = list.begin();
-	for (; it != list.end(); ++it) {
-		if (!RecordRobotTaskState(*it))
+	int affected_rows = 0;
+	base_logic::RobotTask *info = NULL;
+	std::list<base_logic::RobotTask *>::iterator it = list.begin();
+	while (it != list.end()) {
+		info = *it;
+		ExistRobotTask(*it, affected_rows);
+		if (affected_rows > 0) {
+			LOG_MSG2("the task has exec success, type: %d, ValueSerialization: %s",
+					info->type(), info->SerializeSelf().c_str());
+			it = list.erase(it);
+			continue;
+		}
+		if (!RecordRobotTaskState(*it++))
 			r = false;
 	}
 	return r;
