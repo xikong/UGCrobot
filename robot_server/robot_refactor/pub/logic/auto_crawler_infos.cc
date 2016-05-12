@@ -95,15 +95,18 @@ ForgeryIP& ForgeryIP::operator =(const ForgeryIP& ip) {
     return (*this);
 }
 bool ForgeryIP::cmp(const ForgeryIP& t_info, const ForgeryIP& r_info) {
-    return t_info.send_last_time() < r_info.send_last_time();
+    return t_info.access_time() < r_info.access_time();
 }
 
 void ForgeryIP::ValueSerialization(base_logic::DictionaryValue* dict) {
-    dict->GetInteger(L"id", &data_->id_);
+	int64 tmp;
+    dict->GetBigInteger(L"id", &tmp);
+    data_->id_ = tmp;
     //  dict->GetInteger(L"type", reinterpret_cast<int32*>(&data_->type_));
     dict->GetCharInteger(L"type", &data_->type_);
     dict->GetString(L"ip", &data_->ip_);
     dict->GetString(L"create_time", &data_->create_time_);
+    dict->GetBigInteger(L"access_time", &data_->access_time_);
 }
 
 ForgeryUA::ForgeryUA() {
@@ -130,11 +133,14 @@ ForgeryUA& ForgeryUA::operator =(const ForgeryUA& ua) {
 }
 
 void ForgeryUA::ValueSerialization(base_logic::DictionaryValue* dict) {
-    dict->GetInteger(L"id", &data_->id_);
+	int64 tmp;
+    dict->GetBigInteger(L"id", &tmp);
+    data_->id_ = tmp;
     //  dict->GetInteger(L"type", reinterpret_cast<int32*>(&data_->type_));
     dict->GetCharInteger(L"type", &data_->type_);
     dict->GetString(L"ua", &data_->ua_);
     dict->GetString(L"create_time", &data_->create_time_);
+    dict->GetBigInteger(L"access_time", &data_->access_time_);
 }
 
 LoginCookie::LoginCookie() {
@@ -163,6 +169,13 @@ void LoginCookie::ValueSerialization(base_logic::DictionaryValue* dict) {
     dict->GetString(L"cookie_body", &data_->cookie_body);
     dict->GetString(L"username", &data_->username);
     dict->GetString(L"passwd", &data_->passwd);
+    int64 tmp;
+    dict->GetBigInteger(L"ip_id", &tmp);
+    ip_.set_id(tmp);
+    dict->GetBigInteger(L"ua_id", &tmp);
+    ua_.set_id(tmp);
+    LOG_DEBUG2("cookie_id = %lld, ip_id = %d, ua_id = %d",
+    		cookie_id(), ip_.id(), ua_.id());
 }
 
 void RobotTaskContent::ValueSerialization(base_logic::DictionaryValue* dict) {
@@ -193,8 +206,10 @@ void RobotTask::SetTaskPacketUnit(RobotTaskBase *task) {
 	task->task_type = type_;
 	task->cookie_id = cookie_.cookie_id();
 	task->cookie = cookie_.get_cookie_body();
-	task->ua = ua_.ua();
-	task->addr = ip_.ip();
+	task->ua = cookie_.ua_.ua();
+	task->addr = cookie_.ip_.ip();
+//	task->ua = ua_.ua();
+//	task->addr = ip_.ip();
 	task->content = content_.content();
 }
 

@@ -37,6 +37,7 @@ void TaskSchdulerManager::Init() {
 
 void TaskSchdulerManager::InitDB(robot_task_logic::CrawlerTaskDB* task_db) {
 	task_db_ = task_db;
+	cookie_cache_->SetTaskDb(task_db);
 	SetBatchIP();
 	task_db_->FectchBatchForgeryUA(&ua_cache_->ua_list_);
 	SetBatchCookies();
@@ -131,12 +132,12 @@ void TaskSchdulerManager::FetchBatchTask(
 	base_logic::WLockGd lk(lock_);
 	base_logic::ForgeryUA ua;
 	time_t current_time = time(NULL);
-	ua_cache_->SortUABySendTime();
+//	ua_cache_->SortUABySendTime();
 	while ((*list).size() > 0) {
 		base_logic::RobotTask *info = (*list).front();
 		(*list).pop_front();
 		ua_cache_->GetUA(ua);
-		info->set_ua(ua);
+//		info->set_ua(ua);
 		task_cache_->task_idle_map_[info->id()] = info;
 	}
 }
@@ -195,7 +196,7 @@ bool TaskSchdulerManager::DistributionTask() {
 			manager_info_->svr_info.id, 0);
 	int crawler_type = task_db_->GetCrawlerTypeByOpCode(ASSIGN_ROBOT_TASKS);
 	LOG_DEBUG2("task_type[%d] map to crawler_type[%d]", ASSIGN_ROBOT_TASKS, crawler_type);
-	if (/*!crawler_schduler_engine_->CheckOptimalRouter(crawler_type)*/false) {
+	if (!crawler_schduler_engine_->CheckOptimalRouter(crawler_type)) {
 		LOG_MSG2("no have OptimalCrawler with crawler_type: %d", crawler_type);
 		return true;
 	}
@@ -203,7 +204,11 @@ bool TaskSchdulerManager::DistributionTask() {
 	base_logic::WLockGd lk(lock_);
 	int32 count = task_cache_->task_idle_map_.size();
 	int32 index = 0;
+
+	cookie_cache_->BindForgeryIP(*ip_cache_);
+	cookie_cache_->BindForgeryUA(*ua_cache_);
 	cookie_cache_->SortCookies();
+
 	TASKINFO_MAP::iterator it = task_cache_->task_idle_map_.begin();
 	TASKINFO_MAP::iterator packet_start = it;
 	for (; it != task_cache_->task_idle_map_.end(), index < count; index++) {
@@ -213,11 +218,11 @@ bool TaskSchdulerManager::DistributionTask() {
 		base_logic::RobotTask *info = (it++)->second;
 		if (!cookie_cache_->GetCookie(info->type(), cookie))
 			continue;
-		if (!cookie_ip_manager_->GetIpByCookie(cookie, ip)) {
-			LOG_MSG2("there are no ip for cookie: %s",
-					cookie.get_cookie_body().c_str());
-			continue;
-		}
+//		if (!cookie_ip_manager_->GetIpByCookie(cookie, ip)) {
+//			LOG_MSG2("there are no ip for cookie: %s",
+//					cookie.get_cookie_body().c_str());
+//			continue;
+//		}
 		if (!content_cache_->GetContentByTaskType(info->type(), con)) {
 			LOG_MSG2("task(id: %d, type: %d) has no content, ignore it",
 					info->id(), info->type());
@@ -225,7 +230,7 @@ bool TaskSchdulerManager::DistributionTask() {
 		}
 
 		info->set_cookie(cookie);
-		info->set_ip(ip);
+//		info->set_ip(ip);
 		info->set_content(con);
 
 		struct RobotTaskBase *unit = info->CreateTaskPacketUnit();
@@ -242,8 +247,10 @@ bool TaskSchdulerManager::DistributionTask() {
 		if (tasks.task_set.size() % base_num == 0
 				&& tasks.task_set.size() != 0) {
 			tasks.task_num = tasks.task_set.size();
-			bool send_success = crawler_schduler_engine_->SendOptimalRouter(
-					(const void*) &tasks, 0, crawler_type);
+			bool send_success = true;
+			net::PacketProsess::DumpPacket(&tasks);
+//			send_success = crawler_schduler_engine_->SendOptimalRouter(
+//					(const void*) &tasks, 0, crawler_type);
 			if (!send_success) {
 				LOG_DEBUG2("packet_start ~ it size: %d",
 						std::distance(packet_start, it));
@@ -261,8 +268,10 @@ bool TaskSchdulerManager::DistributionTask() {
 	//解决余数
 	if (tasks.task_set.size() > 0) {
 		tasks.task_num = tasks.task_set.size();
-		bool send_success = crawler_schduler_engine_->SendOptimalRouter((const void*) &tasks, 0,
-				crawler_type);
+		bool send_success = true;
+		net::PacketProsess::DumpPacket(&tasks);
+//		send_success = crawler_schduler_engine_->SendOptimalRouter((const void*) &tasks, 0,
+//				crawler_type);
 		if (!send_success) {
 			LOG_DEBUG2("packet_start ~ packet_start size: %d",
 					std::distance(packet_start, it));

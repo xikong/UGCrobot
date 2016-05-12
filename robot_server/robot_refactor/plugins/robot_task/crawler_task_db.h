@@ -24,6 +24,10 @@ class CrawlerTaskDB {
  public:
     bool UpdateCookie(int64 cookie_id, int is_valid);
 
+    bool BindIPToCookie(int64 cookie_id, int64 ip_id);
+
+    bool BindUAToCookie(int64 cookie_id, int64 ua_id);
+
     bool FectchBatchForgeryUA(std::list<base_logic::ForgeryUA>* list);
 
     bool ExistRobotTask(base_logic::RobotTask *task, int &affected_rows);

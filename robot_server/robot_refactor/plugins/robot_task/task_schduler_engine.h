@@ -30,6 +30,120 @@ class TaskSchdulerCache {
     TASKINFO_LIST         task_temp_list_;
 };
 
+typedef std::map<std::string, int>	IpUseTimesMap;
+class IPCache {
+public:
+	IPCache() {
+		cur_it_ = ip_list_.end();
+	}
+	bool GetIP(base_logic::ForgeryIP &ip) {
+		if (ip_list_.empty()) {
+			LOG_MSG("there are no more IPs");
+			return false;
+		}
+		ip = *ip_list_.begin();
+		int use_times = ++ip_use_times_map_[ip.ip()];
+		if (IP_USE_TIMES_LIMIT == use_times) {
+			ip_list_.erase(ip_list_.begin());
+			LOG_MSG2("ip: [%s] has use more than %d IP_USE_TIMES_LIMIT times, erase it, available ip: %d",
+					ip.ip().c_str(), IP_USE_TIMES_LIMIT, ip_list_.size());
+		}
+		return true;
+	}
+
+	bool GetIPById(base_logic::ForgeryIP &ip) {
+		if (ip_list_.empty()) {
+			LOG_MSG("there are no more IPs");
+			return false;
+		}
+		std::list<base_logic::ForgeryIP>::iterator it = ip_list_.begin();
+		for (; it != ip_list_.end(); ++it) {
+			if (ip.id() == it->id()) {
+				ip = *it;
+				return true;
+			}
+		}
+	}
+
+	void Update(const std::list<base_logic::ForgeryIP> &ip_list) {
+		std::list<base_logic::ForgeryIP>::const_iterator it = ip_list.begin();
+		for (; it != ip_list.end(); ++it) {
+			std::string ip = it->ip();
+			if (ip_use_times_map_.end() == ip_use_times_map_.find(ip)) {
+				ip_use_times_map_[ip] = 0;
+				ip_list_.push_back(*it);
+//				LOG_DEBUG2("add new ip: %s", ip.c_str());
+			}
+		}
+	}
+
+	void Reset() {
+		ip_list_.clear();
+		IpUseTimesMap::iterator it = ip_use_times_map_.begin();
+		for (; it != ip_use_times_map_.end(); ++it) {
+			base_logic::ForgeryIP forgery_ip;
+			forgery_ip.set_ip(it->first);
+			ip_list_.push_back(forgery_ip);
+		}
+	}
+
+	void SortIPBySendTime() {
+		ip_list_.sort(base_logic::ForgeryIP::cmp);
+		cur_it_ = ip_list_.begin();
+	}
+private:
+	friend class TaskSchdulerManager;
+	friend class CookieIpEngine;
+	friend class CookieCache;
+
+	static const int IP_USE_TIMES_LIMIT = 4;
+	std::list<base_logic::ForgeryIP>	   ip_list_;		//记录可用的 IP
+	std::list<base_logic::ForgeryIP>::iterator cur_it_;
+	IpUseTimesMap ip_use_times_map_;						//保存了所有IP
+};
+
+class ForgeryUACache {
+public:
+	ForgeryUACache() {
+		cur_it_ = ua_list_.end();
+	}
+	bool GetUA(base_logic::ForgeryUA &ua) {
+		if (ua_list_.empty()) {
+			LOG_MSG("there is NONE ua");
+			return false;
+		}
+		if (ua_list_.end() == cur_it_) {
+			cur_it_ = ua_list_.begin();
+		}
+		ua = *cur_it_++;
+		ua.update_send_time();
+		return true;
+	}
+	bool GetUAById(base_logic::ForgeryUA &ua) {
+		if (ua_list_.empty()) {
+			LOG_MSG("there is NONE ua");
+			return false;
+		}
+		std::list<base_logic::ForgeryUA>::iterator it = ua_list_.begin();
+		for (; it != ua_list_.end(); ++it) {
+			if (it->id() == ua.id()) {
+				ua = *it;
+				return true;
+			}
+		}
+	}
+	void SortUABySendTime() {
+		ua_list_.sort(base_logic::ForgeryUA::cmp);
+		cur_it_ = ua_list_.begin();
+	}
+private:
+	friend class TaskSchdulerManager;
+	friend class CookieCache;
+	std::list<base_logic::ForgeryUA>	ua_list_;
+	std::list<base_logic::ForgeryUA>::const_iterator cur_it_;
+
+};
+
 typedef std::list<base_logic::LoginCookie> CookieList;
 
 struct CookiePlatform {
@@ -55,9 +169,15 @@ struct CookiePlatform {
 };
 
 typedef std::map<int64, CookiePlatform> CookieMap;
+class IPCache;
+class ForgeryUACache;
 
 class CookieCache {
  public:
+	void SetTaskDb(robot_task_logic::CrawlerTaskDB* task_db) {
+		task_db_ = task_db;
+	}
+
 	bool GetCookie(int64 attr_id, base_logic::LoginCookie &cookie) {
 		time_t current_time = time(NULL);
 		if (cookie_map_.end() == cookie_map_.find(attr_id)) {
@@ -92,6 +212,62 @@ class CookieCache {
 		}
 		return true;
 	}
+	void BindForgeryIP(IPCache &ip_cache) {
+		std::list<base_logic::ForgeryIP> &list = ip_cache.ip_list_;
+		if (list.size() <= 0) {
+			return ;
+		}
+		list.sort(base_logic::ForgeryIP::cmp);
+		std::list<base_logic::ForgeryIP>::iterator ip_it = list.begin();
+		CookieMap::iterator cookie_it = cookie_map_.begin();
+		for (; cookie_it != cookie_map_.end(); ++cookie_it) {
+			CookiePlatform &plat = cookie_it->second;
+			CookieList::iterator plat_it = plat.list.begin();
+			for (; plat_it != plat.list.end(); ++plat_it) {
+				if (0 != plat_it->ip_.id()) { // 数据库中已经绑定
+					if (!plat_it->ip_.ip().empty())
+						continue;
+					ip_cache.GetIPById(plat_it->ip_);
+				} else {
+					plat_it->ip_ = *ip_it;
+					ip_it->update_access_time();
+					if (++ip_it == list.end())
+						ip_it = list.begin();
+					// TODO 更新数据中的绑定关系
+					task_db_->BindIPToCookie(
+							plat_it->cookie_id(), plat_it->ip_.id());
+				}
+			}
+		}
+	}
+	void BindForgeryUA(ForgeryUACache &ua_cache) {
+		std::list<base_logic::ForgeryUA> &ua_list = ua_cache.ua_list_;
+		if (ua_list.size() == 0) {
+			return ;
+		}
+		ua_list.sort(base_logic::ForgeryUA::cmp);
+		std::list<base_logic::ForgeryUA>::iterator ua_it = ua_list.begin();
+		CookieMap::iterator cookie_it = cookie_map_.begin();
+		for (; cookie_it != cookie_map_.end(); ++ cookie_it) {
+			CookiePlatform &plat = cookie_it->second;
+			CookieList::iterator plat_it = plat.list.begin();
+			for (; plat_it != plat.list.end(); ++plat_it) {
+				if (0 != plat_it->ua_.id()) { // 数据库中已经绑定
+					if (!plat_it->ua_.ua().empty())
+						continue;
+					ua_cache.GetUAById(plat_it->ua_);
+				} else {
+					plat_it->ua_ = *ua_it;
+					ua_it->update_access_time();
+					if (++ua_it == ua_list.end())
+						ua_it = ua_list.begin();
+					// TODO 更新数据中的绑定关系
+					task_db_->BindUAToCookie(
+							plat_it->cookie_id(), plat_it->ua_.id());
+				}
+			}
+		}
+	}
 	public:
 		CookieMap cookie_map_;
 		std::map<int64, int64> update_time_map_;
@@ -100,65 +276,11 @@ class CookieCache {
 		{
 			last_time = 0;
 		}
+	private:
+		robot_task_logic::CrawlerTaskDB*       task_db_;
 };
 
-typedef std::map<std::string, int>	IpUseTimesMap;
-class IPCache {
-public:
-	IPCache() {
-		cur_it_ = ip_list_.end();
-	}
-	bool GetIP(base_logic::ForgeryIP &ip) {
-		if (ip_list_.empty()) {
-			LOG_MSG("there are no more IPs");
-			return false;
-		}
-		ip = *ip_list_.begin();
-		int use_times = ++ip_use_times_map_[ip.ip()];
-		if (IP_USE_TIMES_LIMIT == use_times) {
-			ip_list_.erase(ip_list_.begin());
-			LOG_MSG2("ip: [%s] has use more than %d IP_USE_TIMES_LIMIT times, erase it, available ip: %d",
-					ip.ip().c_str(), IP_USE_TIMES_LIMIT, ip_list_.size());
-		}
-		return true;
-	}
 
-	void Update(const std::list<base_logic::ForgeryIP> &ip_list) {
-		std::list<base_logic::ForgeryIP>::const_iterator it = ip_list.begin();
-		for (; it != ip_list.end(); ++it) {
-			std::string ip = it->ip();
-			if (ip_use_times_map_.end() == ip_use_times_map_.find(ip)) {
-				ip_use_times_map_[ip] = 0;
-				ip_list_.push_back(*it);
-//				LOG_DEBUG2("add new ip: %s", ip.c_str());
-			}
-		}
-	}
-
-	void Reset() {
-		ip_list_.clear();
-		IpUseTimesMap::iterator it = ip_use_times_map_.begin();
-		for (; it != ip_use_times_map_.end(); ++it) {
-			base_logic::ForgeryIP forgery_ip;
-			forgery_ip.set_ip(it->first);
-			ip_list_.push_back(forgery_ip);
-		}
-	}
-
-	void SortIPBySendTime() {
-		ip_list_.sort(base_logic::ForgeryIP::cmp);
-		cur_it_ = ip_list_.begin();
-	}
-private:
-	friend class TaskSchdulerManager;
-	friend class CookieIpEngine;
-	friend class CookieIpEngine;
-
-	static const int IP_USE_TIMES_LIMIT = 4;
-	std::list<base_logic::ForgeryIP>	   ip_list_;		//记录可用的 IP
-	std::list<base_logic::ForgeryIP>::iterator cur_it_;
-	IpUseTimesMap ip_use_times_map_;						//保存了所有IP
-};
 
 typedef std::map<std::string, IPCache> UserIpMap;
 typedef std::list<std::string>  IpList;
@@ -243,33 +365,7 @@ private:
 	TaskContentMap	content_map_;
 };
 
-class ForgeryUACache {
-public:
-	ForgeryUACache() {
-		cur_it_ = ua_list_.end();
-	}
-	bool GetUA(base_logic::ForgeryUA &ua) {
-		if (ua_list_.empty()) {
-			LOG_MSG("there is NONE ua");
-			return false;
-		}
-		if (ua_list_.end() == cur_it_) {
-			cur_it_ = ua_list_.begin();
-		}
-		ua = *cur_it_++;
-		ua.update_send_time();
-		return true;
-	}
-	void SortUABySendTime() {
-		ua_list_.sort(base_logic::ForgeryUA::cmp);
-		cur_it_ = ua_list_.begin();
-	}
-private:
-	friend class TaskSchdulerManager;
-	std::list<base_logic::ForgeryUA>	ua_list_;
-	std::list<base_logic::ForgeryUA>::const_iterator cur_it_;
 
-};
 
 class TaskSchdulerManager {
  public:

@@ -196,7 +196,7 @@ bool CrawlerTasklogic::OnBroadcastClose(struct server *srv, const int socket) {
 bool CrawlerTasklogic::OnIniTimer(struct server *srv) {
 	if (srv->add_time_task != NULL) {
 		srv->add_time_task(srv, "robot_task", TIMER_SERVER_STARTUP, 1, 1);
-		srv->add_time_task(srv, "robot_task", TIME_DISTRIBUTION_TASK, 60, -1);
+		srv->add_time_task(srv, "robot_task", TIME_DISTRIBUTION_TASK, 5*60, -1);
 		srv->add_time_task(srv, "robot_task", TIME_FECTCH_TASK, 10, -1);
 		srv->add_time_task(srv, "robot_task", TIME_RECYCLINGTASK, 20, -1);
 		srv->add_time_task(srv, "robot_task", TIME_FETCH_TEMP_TASK, 60, -1);
@@ -205,9 +205,9 @@ bool CrawlerTasklogic::OnIniTimer(struct server *srv) {
 		srv->add_time_task(srv, "robot_task", TIME_CLEAN_NO_EFFECTIVE, 20, -1);
 		srv->add_time_task(srv, "robot_task", TIME_UPDATE_EXEC_TASKS, 10, -1);
 
-		srv->add_time_task(srv, "robot_task", TIME_FETCH_IP, 10, -1);
+		srv->add_time_task(srv, "robot_task", TIME_FETCH_IP, 60, -1);
 		srv->add_time_task(srv, "robot_task", TIME_FETCH_COOKIE, 60, -1);
-		srv->add_time_task(srv, "robot_task", TIME_FETCH_CONTENT, 10, -1);
+		srv->add_time_task(srv, "robot_task", TIME_FETCH_CONTENT, 60, -1);
 	}
 	return true;
 }

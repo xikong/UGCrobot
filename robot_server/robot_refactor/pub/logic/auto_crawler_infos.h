@@ -317,6 +317,9 @@ public:
    const std::string& create_time() const {return data_->create_time_;}
    const std::string& ip() const {return data_->ip_;}
 
+   void update_access_time(time_t t = time(NULL)) { data_->access_time_ = t; }
+   time_t access_time() const { return data_->access_time_; }
+
    static bool cmp(const ForgeryIP& t_info, const ForgeryIP& r_info);
 
    void ValueSerialization(base_logic::DictionaryValue* dict);
@@ -329,13 +332,15 @@ public:
         , id_(0)
         , type_(0)
         , count_(0)
-    	 , send_last_time_(0) {}
+    	, send_last_time_(0)
+    	, access_time_(0) {}
 
     public:
        int32       id_;
        int8        type_;
        int64       count_;
        time_t		send_last_time_;
+       time_t		access_time_;
        std::string create_time_;
        std::string ip_;
        void AddRef() {__sync_fetch_and_add(&refcount_, 1);}
@@ -358,7 +363,7 @@ public:
    ForgeryUA& operator = (const ForgeryUA& ua);
 
    static bool cmp(const ForgeryUA& t_info, const ForgeryUA& r_info) {
-	   t_info.send_time() < r_info.send_time();
+	   t_info.access_time() < r_info.access_time();
    }
 
    ~ForgeryUA() {
@@ -396,6 +401,10 @@ public:
    const std::string& create_time() const {return data_->create_time_;}
    const std::string& ua() const {return data_->ua_;}
    const int64 count() const {return data_->count_;}
+
+   void update_access_time(time_t t = time(NULL)) { data_->access_time_ = t; }
+   time_t access_time() const { return data_->access_time_; }
+
    void ValueSerialization(base_logic::DictionaryValue* dict);
 
    class Data{
@@ -405,13 +414,15 @@ public:
         , id_(0)
         , type_(0)
         , count_(0)
-    	, send_time_(time(NULL)) {}
+    	, send_time_(time(NULL))
+    	, access_time_(0) {}
 
     public:
        int32       id_;
        int8        type_;
        int64       count_;
        time_t	   send_time_;
+       time_t		access_time_;
        std::string create_time_;
        std::string ua_;
        void AddRef() {__sync_fetch_and_add(&refcount_, 1);}
@@ -510,6 +521,10 @@ public:
 
    void ValueSerialization(base_logic::DictionaryValue* dict);
 
+public:
+   ForgeryIP	ip_;
+   ForgeryUA	ua_;
+
    class Data {
     public:
            Data()
@@ -531,7 +546,8 @@ public:
            std::string  passwd;
            bool         is_read;
            bool         is_first;
-
+//           ForgeryIP	ip_;
+//           ForgeryUA	ua_;
            void AddRef() {
                __sync_fetch_and_add(&refcount_, 1);
            }

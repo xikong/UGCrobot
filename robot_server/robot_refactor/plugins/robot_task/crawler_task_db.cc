@@ -40,11 +40,39 @@ bool CrawlerTaskDB::UpdateCookie(int64 cookie_id, int is_valid) {
     return true;
 }
 
+bool CrawlerTaskDB::BindIPToCookie(int64 cookie_id, int64 ip_id) {
+    bool r = false;
+    scoped_ptr<base_logic::DictionaryValue> dict(
+                    new base_logic::DictionaryValue());
+    std::stringstream os;
+    os << "call proc_BindIPToCookie(" << cookie_id << "," << ip_id << ")";
+    std::string sql = os.str();
+    dict->SetString(L"sql", sql);
+    r = mysql_engine_->WriteData(0, (base_logic::Value*)(dict.get()));
+    if (!r)
+        return r;
+    return true;
+}
+
+bool CrawlerTaskDB::BindUAToCookie(int64 cookie_id, int64 ua_id) {
+    bool r = false;
+    scoped_ptr<base_logic::DictionaryValue> dict(
+                    new base_logic::DictionaryValue());
+    std::stringstream os;
+    os << "call proc_BindUAToCookie(" << cookie_id << "," << ua_id << ")";
+    std::string sql = os.str();
+    dict->SetString(L"sql", sql);
+    r = mysql_engine_->WriteData(0, (base_logic::Value*)(dict.get()));
+    if (!r)
+        return r;
+    return true;
+}
+
 bool CrawlerTaskDB::FectchBatchForgeryUA(std::list<base_logic::ForgeryUA>* list) {
     bool r = false;
     scoped_ptr<base_logic::DictionaryValue> dict(
                     new base_logic::DictionaryValue());
-    std::string sql = "call proc_FecthBatchUA()";
+    std::string sql = "call proc_FetchBatchUA()";
     base_logic::ListValue* listvalue;
     dict->SetString(L"sql", sql);
     r = mysql_engine_->ReadData(0, (base_logic::Value*)(dict.get()),
@@ -87,6 +115,9 @@ void CrawlerTaskDB::CallBackFectchBatchForgeryUA(void* param,
                 info_value->SetInteger(L"type", atoll(rows[2]));
             if (rows[3] != NULL)
                 info_value->SetString(L"create_time", rows[3]);
+            if (rows[4] != NULL)
+            	info_value->SetBigInteger(L"access_time", atoll(rows[4]));
+
             list->Append((base_logic::Value*)(info_value));
         }
     }
@@ -198,7 +229,7 @@ bool CrawlerTaskDB::GetCookies(int count, uint64 last_time, std::list<base_logic
     scoped_ptr<base_logic::DictionaryValue> dict(
             new base_logic::DictionaryValue());
 	std::stringstream os;
-	os << "call proc_GetRobotCookies(" << count << "," << last_time << ")";
+	os << "call proc_GetRobotCookiesV1(" << count << "," << last_time << ")";
     std::string sql = os.str();
 
     base_logic::ListValue* listvalue;
@@ -263,6 +294,10 @@ void CrawlerTaskDB::CallBackGetCookies(void* param,
 
             if (rows[5] != NULL)
                 info_value->SetString(L"passwd", rows[5]);
+            if (rows[6] != NULL)
+            	info_value->SetBigInteger(L"ip_id", atoll(rows[6]));
+            if (rows[7] != NULL)
+            	info_value->SetBigInteger(L"ua_id", atoll(rows[7]));
 
             list->Append((base_logic::Value*)(info_value));
         }
@@ -274,7 +309,7 @@ bool CrawlerTaskDB::FectchBatchForgeryIP(std::list<base_logic::ForgeryIP>* list)
     bool r = false;
     scoped_ptr<base_logic::DictionaryValue> dict(
                     new base_logic::DictionaryValue());
-    std::string sql = "call proc_FecthBatchIP()";
+    std::string sql = "call procFetchBatchIP()";
     base_logic::ListValue* listvalue;
     dict->SetString(L"sql", sql);
     r = mysql_engine_->ReadData(0, (base_logic::Value*)(dict.get()),
@@ -318,6 +353,8 @@ void CrawlerTaskDB::CallBackFectchBatchForgeryIP(void* param,
                         logic::SomeUtils::StringToIntChar(rows[2]));
             if (rows[3] != NULL)
                 info_value->SetString(L"create_time", rows[3]);
+            if (rows[4] != NULL)
+            	info_value->SetBigInteger(L"access_time", atoll(rows[4]));
             list->Append((base_logic::Value*)(info_value));
         }
     }
