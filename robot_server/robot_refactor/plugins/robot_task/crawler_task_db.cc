@@ -40,12 +40,13 @@ bool CrawlerTaskDB::UpdateCookie(int64 cookie_id, int is_valid) {
     return true;
 }
 
-bool CrawlerTaskDB::BindIPToCookie(int64 cookie_id, int64 ip_id) {
+bool CrawlerTaskDB::BindIPToCookie(int64 cookie_id, int64 ip_id, const std::string &ip) {
     bool r = false;
     scoped_ptr<base_logic::DictionaryValue> dict(
                     new base_logic::DictionaryValue());
     std::stringstream os;
-    os << "call proc_BindIPToCookie(" << cookie_id << "," << ip_id << ")";
+    os << "call proc_BindIPToCookie(" << cookie_id << "," << ip_id << ",\'"
+    		<< ip << "\')";
     std::string sql = os.str();
     dict->SetString(L"sql", sql);
     r = mysql_engine_->WriteData(0, (base_logic::Value*)(dict.get()));
@@ -298,6 +299,8 @@ void CrawlerTaskDB::CallBackGetCookies(void* param,
             	info_value->SetBigInteger(L"ip_id", atoll(rows[6]));
             if (rows[7] != NULL)
             	info_value->SetBigInteger(L"ua_id", atoll(rows[7]));
+            if (rows[8] != NULL)
+            	info_value->SetString(L"ip", rows[8]);
 
             list->Append((base_logic::Value*)(info_value));
         }

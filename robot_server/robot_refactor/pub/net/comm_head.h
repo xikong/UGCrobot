@@ -563,7 +563,33 @@ struct TaogubaTask: public RobotTaskBase {
 		subject = taoguba_task->subject();
 		return true;
 	}
+	virtual size_t size() const {
+		size_t sum = RobotTaskBase::size();
+		sum += sizeof(uint16) * 2 + topic_id.size() + subject.size();
+		return sum;
+	}
+	virtual void SerializeSelf(packet::DataOutPacket &out) {
+		RobotTaskBase::SerializeSelf(out);
+		out.Write16(topic_id.size());
+		out.WriteData(topic_id.c_str(), topic_id.size());
+		out.Write16(subject.size());
+		out.WriteData(subject.c_str(), subject.size());
+	}
+	virtual int Print(char buf[], size_t size) {
+		std::string title = "-------- taoguba task begin --------\n";
+		int write_bytes = snprintf(buf, size, title.c_str());
+		write_bytes += RobotTaskBase::Print(buf+write_bytes, size-write_bytes);
+		size -= write_bytes;
+		std::stringstream os;
+		PRINT(topic_id.size());
+		PRINT(topic_id);
+		PRINT(subject.size());
+		PRINT(subject);
+		os << "-------- taoguba task end  --------" << std::endl;
+		return write_bytes + snprintf(buf+write_bytes, size, os.str().c_str());
+	}
 };
+
 
 class RobotTaskPacketFactory {
 public:

@@ -8,6 +8,7 @@
 #include "basic/radom_in.h"
 #include "task_schduler_engine.h"
 #include "net/packet_processing.h"
+#include "crawler_task_logic.h"
 
 namespace robot_task_logic {
 
@@ -15,6 +16,25 @@ using namespace base_logic;
 
 TaskSchdulerManager* TaskSchdulerEngine::schduler_mgr_ = NULL;
 TaskSchdulerEngine* TaskSchdulerEngine::schduler_engine_ = NULL;
+
+bool CookieCache::GetCookie(int64 attr_id, base_logic::LoginCookie &cookie) {
+	time_t current_time = time(NULL);
+	if (cookie_map_.end() == cookie_map_.find(attr_id)) {
+		LOG_MSG2("can't find the cookie with the attr_id: %d", attr_id);
+		return false;
+	}
+	struct CookiePlatform &platform = cookie_map_[attr_id];
+	if (platform.list.end() == platform.cur_it)
+		platform.cur_it = platform.list.begin();
+	cookie = *platform.cur_it;
+	if ((cookie.send_last_time() + config_->cookie_use_tick) > current_time) {
+		LOG_MSG("cookie use too often");
+		return false;
+	}
+	++platform.cur_it;
+	cookie.update_time();
+	return true;
+}
 
 TaskSchdulerManager::TaskSchdulerManager() :
 		crawler_count_(0), task_db_(NULL), manager_info_(NULL) {
@@ -42,11 +62,18 @@ void TaskSchdulerManager::InitDB(robot_task_logic::CrawlerTaskDB* task_db) {
 	task_db_->FectchBatchForgeryUA(&ua_cache_->ua_list_);
 	SetBatchCookies();
 	SetBatchContents();
+
+	// test
+	cookie_cache_->BindForgeryIP(*ip_cache_);
+	cookie_cache_->BindForgeryUA(*ua_cache_);
+	cookie_cache_->SortCookies();
 }
 
 void TaskSchdulerManager::Init(
-		router_schduler::SchdulerEngine* crawler_engine) {
+		router_schduler::SchdulerEngine* crawler_engine, Config *config) {
 	crawler_schduler_engine_ = crawler_engine;
+	config_ = config;
+	cookie_cache_->SetConfig(config);
 }
 
 void TaskSchdulerManager::InitManagerInfo(plugin_share::ManagerInfo *info) {
@@ -182,7 +209,7 @@ bool TaskSchdulerManager::DistributionTask() {
 		LOG_MSG("wait server init complete");
 		return false;
 	}
-	int32 base_num = 5;
+	int32 base_num = 1;
 	int data_length = 0;
 	time_t current_time = time(NULL);
 	LOG_DEBUG2("distrubute task current_time=%d task_cache_->task_idle_map_.size=%d",
@@ -192,7 +219,7 @@ bool TaskSchdulerManager::DistributionTask() {
 	}
 
 	struct RobotTasks tasks;
-	MAKE_HEAD(tasks, ASSIGN_ROBOT_TASKS, 0, 0, 0, 0, 0, 0,
+	MAKE_HEAD(tasks, ASSIGN_ROBOT_TASKS, 0, 0, 0, 0, 0, manager_info_->svr_info.type,
 			manager_info_->svr_info.id, 0);
 	int crawler_type = task_db_->GetCrawlerTypeByOpCode(ASSIGN_ROBOT_TASKS);
 	LOG_DEBUG2("task_type[%d] map to crawler_type[%d]", ASSIGN_ROBOT_TASKS, crawler_type);
@@ -248,9 +275,9 @@ bool TaskSchdulerManager::DistributionTask() {
 				&& tasks.task_set.size() != 0) {
 			tasks.task_num = tasks.task_set.size();
 			bool send_success = true;
-			net::PacketProsess::DumpPacket(&tasks);
-//			send_success = crawler_schduler_engine_->SendOptimalRouter(
-//					(const void*) &tasks, 0, crawler_type);
+//			net::PacketProsess::DumpPacket(&tasks);
+			send_success = crawler_schduler_engine_->SendOptimalRouter(
+					(const void*) &tasks, 0, crawler_type);
 			if (!send_success) {
 				LOG_DEBUG2("packet_start ~ it size: %d",
 						std::distance(packet_start, it));
@@ -262,6 +289,8 @@ bool TaskSchdulerManager::DistributionTask() {
 			}
 			packet_start = it;
 			net::PacketProsess::ClearRobotTaskList(&tasks);
+			// 每次只分发一个包
+			break;
 		}
 	 }
 
@@ -269,9 +298,9 @@ bool TaskSchdulerManager::DistributionTask() {
 	if (tasks.task_set.size() > 0) {
 		tasks.task_num = tasks.task_set.size();
 		bool send_success = true;
-		net::PacketProsess::DumpPacket(&tasks);
-//		send_success = crawler_schduler_engine_->SendOptimalRouter((const void*) &tasks, 0,
-//				crawler_type);
+//		net::PacketProsess::DumpPacket(&tasks);
+		send_success = crawler_schduler_engine_->SendOptimalRouter((const void*) &tasks, 0,
+				crawler_type);
 		if (!send_success) {
 			LOG_DEBUG2("packet_start ~ packet_start size: %d",
 					std::distance(packet_start, it));

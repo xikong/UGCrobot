@@ -3,6 +3,10 @@
 
 #include <list>
 #include <string>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "core/common.h"
 #include "net/errno.h"
 #include "basic/native_library.h"
@@ -10,8 +14,11 @@
 #include "logic/logic_unit.h"
 #include "basic/radom_in.h"
 #include "crawler_task_logic.h"
+#include "task_schduler_engine.h"
 
 #define DEFAULT_CONFIG_PATH     "./plugins/robot_task/robot_task_config.xml"
+#define ROBOT_CONFIG_FILE		"./config"
+#define MAX_BUFFER_SIZE			4096
 
 #define TIMER_SERVER_STARTUP	10002
 
@@ -28,6 +35,79 @@ CrawlerTasklogic::CrawlerTasklogic() :
 CrawlerTasklogic::~CrawlerTasklogic() {
 }
 
+void Config::Deserialize(base_logic::DictionaryValue *dict) {
+	int64 tmp;
+	dict->GetBigInteger(L"assign_task_tick", &tmp);
+	assign_task_tick = tmp;
+	dict->GetBigInteger(L"fetch_task_tick", &tmp);
+	fetch_task_tick = tmp;
+	dict->GetBigInteger(L"recycle_task_tick", &tmp);
+	recycle_task_tick = tmp;
+	dict->GetBigInteger(L"clean_no_effective_client_tick", &tmp);
+	clean_no_effective_client_tick = tmp;
+	dict->GetBigInteger(L"fetch_ip_tick", &tmp);
+	fetch_ip_tick = tmp;
+	dict->GetBigInteger(L"fetch_cookie_tick", &tmp);
+	fetch_cookie_tick = tmp;
+	dict->GetBigInteger(L"fetch_content_tick", &tmp);
+	fetch_content_tick = tmp;
+	dict->GetBigInteger(L"cookie_use_tick", &tmp);
+	cookie_use_tick = tmp;
+}
+
+void Config::Print() const {
+	std::stringstream os;
+	os << "\n--------------------- Config Begin ---------------------" << std::endl;
+#define PRINT(v) \
+	os << '\t' << #v << " = " << v << std::endl
+	PRINT(assign_task_tick);
+	PRINT(fetch_task_tick);
+	PRINT(recycle_task_tick);
+	PRINT(clean_no_effective_client_tick);
+	PRINT(fetch_ip_tick);
+	PRINT(fetch_cookie_tick);
+	PRINT(fetch_content_tick);
+	PRINT(cookie_use_tick);
+	os << "--------------------- Config End  ---------------------" << std::endl;
+	LOG_MSG2("%s", os.str().c_str());
+#undef PRINT
+}
+
+bool CrawlerTasklogic::ReadConfig() {
+	FILE *hFile = fopen(ROBOT_CONFIG_FILE, "r");
+	if (NULL == hFile) {
+		LOG_MSG2("open %s file error", ROBOT_CONFIG_FILE);
+		return false;
+	}
+	struct stat  file_stat;
+	if (0 != stat(ROBOT_CONFIG_FILE, &file_stat)) {
+		LOG_MSG2("get %s stat error", ROBOT_CONFIG_FILE);
+		return false;
+	}
+	off_t filesize = file_stat.st_size;
+	char buf[MAX_BUFFER_SIZE];
+	fread(buf, 1, filesize, hFile);
+	std::string data(buf, filesize);
+	LOG_DEBUG2("config content: %s", data.c_str());
+
+	base_logic::ValueSerializer* engine =
+			base_logic::ValueSerializer::Create(0, &data);
+	int error_code = 0;
+	std::string error_str;
+	base_logic::Value* value = engine->Deserialize(&error_code, &error_str);
+	if (0 != error_code || NULL == value) {
+		LOG_MSG2("deserialize error, error_code = %d, error_str = %s",
+				error_code, error_str);
+		return false;
+	}
+	base_logic::DictionaryValue* config =
+			(base_logic::DictionaryValue*) value;
+	config_.Deserialize(config);
+	delete config;
+	base_logic::ValueSerializer::DeleteSerializer(0, engine);
+	return true;
+}
+
 bool CrawlerTasklogic::Init() {
 	bool r = false;
 	router_schduler::SchdulerEngine* (*router_engine)(void);
@@ -39,6 +119,9 @@ bool CrawlerTasklogic::Init() {
 		return false;
 	r = config->LoadConfig(path);
 	base_logic::DataControllerEngine::Init(config);
+
+	ReadConfig();
+	config_.Print();
 
 	std::string cralwer_library = "./crawler_schduler/crawler_schduler.so";
 	std::string cralwer_func = "GetRouterSchdulerEngine";
@@ -54,7 +137,7 @@ bool CrawlerTasklogic::Init() {
 	robot_task_logic::TaskSchdulerManager* schduler_mgr =
 			robot_task_logic::TaskSchdulerEngine::GetTaskSchdulerManager();
 
-	schduler_mgr->Init(router_schduler_engine_);
+	schduler_mgr->Init(router_schduler_engine_, &config_);
 	schduler_mgr->InitDB(task_db_.get());
 
 	robot_task_logic::TaskSchdulerEngine* engine =
@@ -196,18 +279,18 @@ bool CrawlerTasklogic::OnBroadcastClose(struct server *srv, const int socket) {
 bool CrawlerTasklogic::OnIniTimer(struct server *srv) {
 	if (srv->add_time_task != NULL) {
 		srv->add_time_task(srv, "robot_task", TIMER_SERVER_STARTUP, 1, 1);
-		srv->add_time_task(srv, "robot_task", TIME_DISTRIBUTION_TASK, 5*60, -1);
-		srv->add_time_task(srv, "robot_task", TIME_FECTCH_TASK, 10, -1);
-		srv->add_time_task(srv, "robot_task", TIME_RECYCLINGTASK, 20, -1);
+		srv->add_time_task(srv, "robot_task", TIME_DISTRIBUTION_TASK, config_.assign_task_tick, -1);
+		srv->add_time_task(srv, "robot_task", TIME_FECTCH_TASK, config_.fetch_task_tick, -1);
+		srv->add_time_task(srv, "robot_task", TIME_RECYCLINGTASK, config_.recycle_task_tick, -1);
 		srv->add_time_task(srv, "robot_task", TIME_FETCH_TEMP_TASK, 60, -1);
 		srv->add_time_task(srv, "robot_task", TIME_DISTRBUTION_TEMP_TASK, 10,
 				-1);
-		srv->add_time_task(srv, "robot_task", TIME_CLEAN_NO_EFFECTIVE, 20, -1);
+		srv->add_time_task(srv, "robot_task", TIME_CLEAN_NO_EFFECTIVE, config_.clean_no_effective_client_tick, -1);
 		srv->add_time_task(srv, "robot_task", TIME_UPDATE_EXEC_TASKS, 10, -1);
 
-		srv->add_time_task(srv, "robot_task", TIME_FETCH_IP, 60, -1);
-		srv->add_time_task(srv, "robot_task", TIME_FETCH_COOKIE, 60, -1);
-		srv->add_time_task(srv, "robot_task", TIME_FETCH_CONTENT, 60, -1);
+		srv->add_time_task(srv, "robot_task", TIME_FETCH_IP, config_.fetch_ip_tick, -1);
+		srv->add_time_task(srv, "robot_task", TIME_FETCH_COOKIE, config_.fetch_cookie_tick, -1);
+		srv->add_time_task(srv, "robot_task", TIME_FETCH_CONTENT, config_.fetch_content_tick, -1);
 	}
 	return true;
 }

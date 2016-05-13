@@ -640,8 +640,8 @@ public:
 		UNKNOWN,
 		WEIBO,
 		QZONE,
-		TAOGUBA,
 		TIEBA = 7001,
+		TAOGUBA = 7007,
 		TIANYA
 	};
 
@@ -829,7 +829,11 @@ private:
 class Taoguba: public RobotTask {
 public:
 	Taoguba() {type_ = TAOGUBA;}
-	virtual RobotTaskBase* CreateTaskPacketUnit() {return NULL;}
+	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
+	virtual void GetDataFromDb(base_logic::DictionaryValue* dict);
+	virtual RobotTaskBase* CreateTaskPacketUnit();
+	virtual void SetTaskPacketUnit(RobotTaskBase *task);
+	virtual std::string SerializeSelf();
 
 	std::string topic_id() const {return topic_id_;}
 	std::string subject() const {return subject_;}

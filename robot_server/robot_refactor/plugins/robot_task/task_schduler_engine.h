@@ -6,7 +6,6 @@
 
 #include <map>
 #include <list>
-
 #include "logic/auto_crawler_infos.h"
 #include "crawler_schduler/crawler_schduler_engine.h"
 #include "thread/base_thread_handler.h"
@@ -19,6 +18,8 @@
 #define GET_COOKIES_PER_TIME	3000
 
 namespace robot_task_logic {
+
+struct Config;
 
 typedef std::map<int64, base_logic::RobotTask *> TASKINFO_MAP;
 typedef std::list<base_logic::RobotTask *>  TASKINFO_LIST;
@@ -178,24 +179,7 @@ class CookieCache {
 		task_db_ = task_db;
 	}
 
-	bool GetCookie(int64 attr_id, base_logic::LoginCookie &cookie) {
-		time_t current_time = time(NULL);
-		if (cookie_map_.end() == cookie_map_.find(attr_id)) {
-			LOG_MSG2("can't find the cookie with the attr_id: %d", attr_id);
-			return false;
-		}
-		struct CookiePlatform &platform = cookie_map_[attr_id];
-		if (platform.list.end() == platform.cur_it)
-			platform.cur_it = platform.list.begin();
-		cookie = *platform.cur_it;
-		if ((cookie.send_last_time() + 1800) > current_time) {
-			LOG_MSG("cookie use too often");
-			return false;
-		}
-		++platform.cur_it;
-		cookie.update_time();
-		return true;
-	}
+	bool GetCookie(int64 attr_id, base_logic::LoginCookie &cookie);
 
 	void SortCookies() {
 		CookieMap::iterator it = cookie_map_.begin();
@@ -225,9 +209,9 @@ class CookieCache {
 			CookieList::iterator plat_it = plat.list.begin();
 			for (; plat_it != plat.list.end(); ++plat_it) {
 				if (0 != plat_it->ip_.id()) { // 数据库中已经绑定
-					if (!plat_it->ip_.ip().empty())
+//					if (!plat_it->ip_.ip().empty())
 						continue;
-					ip_cache.GetIPById(plat_it->ip_);
+//					ip_cache.GetIPById(plat_it->ip_);
 				} else {
 					plat_it->ip_ = *ip_it;
 					ip_it->update_access_time();
@@ -235,7 +219,7 @@ class CookieCache {
 						ip_it = list.begin();
 					// TODO 更新数据中的绑定关系
 					task_db_->BindIPToCookie(
-							plat_it->cookie_id(), plat_it->ip_.id());
+							plat_it->cookie_id(), plat_it->ip_.id(), plat_it->ip_.ip());
 				}
 			}
 		}
@@ -268,6 +252,9 @@ class CookieCache {
 			}
 		}
 	}
+	void SetConfig(Config *config) {
+		config_ = config;
+	}
 	public:
 		CookieMap cookie_map_;
 		std::map<int64, int64> update_time_map_;
@@ -278,6 +265,7 @@ class CookieCache {
 		}
 	private:
 		robot_task_logic::CrawlerTaskDB*       task_db_;
+		Config								   *config_;
 };
 
 
@@ -372,7 +360,7 @@ class TaskSchdulerManager {
     TaskSchdulerManager();
     virtual ~TaskSchdulerManager();
 
-    void Init(router_schduler::SchdulerEngine* crawler_engine);
+    void Init(router_schduler::SchdulerEngine* crawler_engine, Config *config);
 
     void InitDB(robot_task_logic::CrawlerTaskDB*     task_db);
 
@@ -440,6 +428,7 @@ class TaskSchdulerManager {
 	TaskContentCache					   *content_cache_;
 	CookieIpEngine						   *cookie_ip_manager_;
 	ForgeryUACache						   *ua_cache_;
+	Config								   *config_;
 };
 
 class TaskSchdulerEngine {

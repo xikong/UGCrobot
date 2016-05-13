@@ -11,10 +11,33 @@
 #include "share/manager_info.h"
 #include "crawler_task_db.h"
 #include "crawler_task_kafka.h"
-#include "task_schduler_engine.h"
 #include "task_time_manager.h"
+#include "logic/base_values.h"
 
 namespace robot_task_logic {
+
+struct Config {
+	// 定时任务配置
+	int assign_task_tick;
+	int fetch_task_tick;
+	int recycle_task_tick;
+	int clean_no_effective_client_tick;
+	int fetch_ip_tick;
+	int fetch_cookie_tick;
+	int fetch_content_tick;
+	//
+	int cookie_use_tick;
+	Config(): assign_task_tick(60)
+			, fetch_task_tick(10)
+			, recycle_task_tick(20)
+			, clean_no_effective_client_tick(20)
+			, fetch_ip_tick(60)
+			, fetch_cookie_tick(60)
+			, fetch_content_tick(60)
+			, cookie_use_tick(24*60*60) { }
+	void Deserialize(base_logic::DictionaryValue *dict);
+	void Print() const;
+};
 
 class CrawlerTasklogic {
 public:
@@ -53,6 +76,8 @@ private:
 
 	bool Startup();
 
+	bool ReadConfig();
+
 	void TimeDistributionTask();
 
 	void TimeFetchTask();
@@ -86,6 +111,7 @@ private:
 	scoped_ptr<robot_task_logic::CrawlerTaskDB> task_db_;
 	scoped_ptr<robot_task_logic::TaskTimeManager> task_time_mgr_;
 	router_schduler::SchdulerEngine* router_schduler_engine_;
+	Config config_;
 };
 
 }  // // namespace crawler_task_logic

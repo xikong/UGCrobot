@@ -24,7 +24,7 @@ class CrawlerTaskDB {
  public:
     bool UpdateCookie(int64 cookie_id, int is_valid);
 
-    bool BindIPToCookie(int64 cookie_id, int64 ip_id);
+    bool BindIPToCookie(int64 cookie_id, int64 ip_id, const std::string &ip);
 
     bool BindUAToCookie(int64 cookie_id, int64 ua_id);
 

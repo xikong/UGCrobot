@@ -170,12 +170,15 @@ void LoginCookie::ValueSerialization(base_logic::DictionaryValue* dict) {
     dict->GetString(L"username", &data_->username);
     dict->GetString(L"passwd", &data_->passwd);
     int64 tmp;
+    std::string tmp_string;
     dict->GetBigInteger(L"ip_id", &tmp);
     ip_.set_id(tmp);
     dict->GetBigInteger(L"ua_id", &tmp);
     ua_.set_id(tmp);
-    LOG_DEBUG2("cookie_id = %lld, ip_id = %d, ua_id = %d",
-    		cookie_id(), ip_.id(), ua_.id());
+    dict->GetString(L"ip", &tmp_string);
+    ip_.set_ip(tmp_string);
+    LOG_DEBUG2("cookie_id = %lld, ip_id = %d, ip = %s, ua_id = %d",
+    		cookie_id(), ip_.id(), ip_.ip().c_str(), ua_.id());
 }
 
 void RobotTaskContent::ValueSerialization(base_logic::DictionaryValue* dict) {
@@ -260,6 +263,36 @@ std::string TiebaTask::SerializeSelf() {
 	os << ", repost_id: " << repost_id_;
 	return os.str();
 
+}
+
+void Taoguba::GetDataFromKafka(base_logic::DictionaryValue* dict) {
+	RobotTask::GetDataFromKafka(dict);
+	dict->GetString(L"id", &topic_id_);
+	dict->GetString(L"title", &subject_);
+}
+
+void Taoguba::GetDataFromDb(base_logic::DictionaryValue* dict) {
+	RobotTask::GetDataFromDb(dict);
+}
+
+RobotTaskBase* Taoguba::CreateTaskPacketUnit() {
+	::TaogubaTask *taoguba_task = new ::TaogubaTask();
+	RobotTask::SetTaskPacketUnit(taoguba_task);
+	taoguba_task->topic_id = topic_id_;
+	taoguba_task->subject = subject_;
+	return taoguba_task;
+}
+
+void Taoguba::SetTaskPacketUnit(RobotTaskBase *task) {
+	RobotTask::SetTaskPacketUnit(task);
+	// TODO
+}
+
+std::string Taoguba::SerializeSelf() {
+	std::stringstream os;
+	os << RobotTask::SerializeSelf();
+	os << ", topic_id: " << topic_id_ << ", subject: " << subject_;
+	return os.str();
 }
 
 RobotTask* RobotTaskFactory::Create(RobotTask::TaskType type) {
