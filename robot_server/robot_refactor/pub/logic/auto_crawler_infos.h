@@ -636,13 +636,15 @@ private:
 
 class RobotTask {
 public:
-	enum TaskType{
+	enum TaskType {
 		UNKNOWN,
 		WEIBO,
 		QZONE,
 		TIEBA = 7001,
 		TAOGUBA = 7007,
-		TIANYA
+		TIANYA,
+		MAOPU,
+		DOUBAN
 	};
 
 	RobotTask()
@@ -702,46 +704,39 @@ protected:
 	base_logic::RobotTaskContent	content_;
 };
 
-#if 0
 class WeiboTask: public RobotTask {
 public:
 	WeiboTask() {type_ = WEIBO;}
-	virtual void GetTaskId(base_logic::DictionaryValue* dict) {}
-	virtual void GetDataFromDb(base_logic::DictionaryValue* dict) {}
-	virtual RobotTaskBase* CreateTaskPacketUnit() {return NULL;}
-	virtual void SetTaskPacketUnit(RobotTaskBase *task) {}
-	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict) {}
+	virtual void GetTaskId(base_logic::DictionaryValue* dict);
+	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
+	virtual void GetDataFromDb(base_logic::DictionaryValue* dict);
+	virtual RobotTaskBase* CreateTaskPacketUnit();
+	virtual void SetTaskPacketUnit(RobotTaskBase *task);
 	virtual std::string SerializeSelf();
-	virtual RobotTaskBase* CreateTaskPacketUnit() {return NULL;}
 public:
-	void set_addr(const std::string &addr) {addr_ = addr;}
-	std::string addr() const {return addr_;}
 	void set_topic_id(const std::string &topic_id) {topic_id_ = topic_id;}
 	std::string topic_id() const {return topic_id_;}
 	void set_host_uin(const std::string host_uin) {host_uin_ = host_uin;}
 	std::string host_uin() const {return host_uin_;}
-//	void set_content(const std::string &content) {content_ = content;}
-//	std::string content() const {return content_;}
 private:
 	std::string		topic_id_;
 	std::string		host_uin_;
-//	std::string		content_;
-	std::string		addr_;
 };
 
 class TianyaTask: public RobotTask {
 public:
 	TianyaTask() {type_ = TIANYA;}
+	virtual void GetTaskId(base_logic::DictionaryValue* dict);
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
+	virtual void GetDataFromDb(base_logic::DictionaryValue* dict);
+	virtual RobotTaskBase* CreateTaskPacketUnit();
+	virtual void SetTaskPacketUnit(RobotTaskBase *task);
 	virtual std::string SerializeSelf();
-	virtual RobotTaskBase* CreateTaskPacketUnit() {return NULL;}
 public:
-	void set_addr(const std::string &addr) {addr_ = addr;}
-	std::string addr() const {return addr_;}
 	void set_post_time(int64 post_time) {post_time_ = post_time;}
 	uint64 post_time() const {return post_time_;}
-	void set_url(const std::string &url) {url_ = url;}
-	std::string url() const {return url_;}
+//	void set_url(const std::string &url) {url_ = url;}
+//	std::string url() const {return url_;}
 	void set_title(const std::string &title) {title_ = title;}
 	std::string title() const {return title_;}
 	void set_user_id(const std::string &user_id) {user_id_ = user_id;}
@@ -751,15 +746,12 @@ public:
 //	void set_content(const std::string &content) {content_ = content;}
 //	std::string content() const {return content_;}
 private:
-	std::string		url_;			//当前帖子地址
+//	std::string		url_;			//当前帖子地址
 	std::string		title_;			//帖子标题
 	std::string		user_id_;		//发帖楼主id
 	std::string		username_;		//发帖楼主名
 	int64			post_time_;		//发帖unix时间
-//	std::string		content_;		//回帖内容
-	std::string		addr_;
 };
-#endif
 
 class TiebaTask: public RobotTask {
 public:
@@ -803,15 +795,15 @@ private:
 	std::string		repost_id_;		//回得楼层编号
 };
 
-#if 0
 class QZoneTask: public RobotTask {
 public:
 	QZoneTask(): host_uin_(0) {type_ = QZONE;}
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
+	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual std::string SerializeSelf();
 public:
-	void set_addr(const std::string &addr) {addr_ = addr;}
-	std::string addr() const {return addr_;}
+//	void set_addr(const std::string &addr) {addr_ = addr;}
+//	std::string addr() const {return addr_;}
 	void set_topic_id(const std::string &topic_id) {topic_id_ = topic_id;}
 	std::string topic_id() const {return topic_id_;}
 	void set_host_uin(int64 host_uin) {host_uin_ = host_uin;}
@@ -821,10 +813,9 @@ public:
 private:
 	std::string		topic_id_;		//留言对象
 	int64			host_uin_;		//对方的 qq 号
-	std::string		content_;		//回复内容
-	std::string		addr_;
+//	std::string		content_;		//回复内容
+//	std::string		addr_;
 };
-#endif
 
 class Taoguba: public RobotTask {
 public:
@@ -840,6 +831,39 @@ public:
 private:
 	std::string topic_id_;
 	std::string subject_;
+};
+
+class MaopuTaskInfo: public RobotTask {
+public:
+	MaopuTaskInfo() { type_ = MAOPU; }
+	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
+	virtual RobotTaskBase* CreateTaskPacketUnit();
+	virtual std::string SerializeSelf();
+public:
+	void set_cat_id(const std::string &cat_id) { cat_id_ = cat_id; }
+	std::string cat_id() const { return cat_id_; }
+
+	void set_catalog_id(const std::string &catalog_id) { catalog_id_ = catalog_id; }
+	std::string catalog_id() const { return catalog_id_; }
+
+	void set_fmtoken(const std::string &fmtoken) { fmtoken_ = fmtoken; }
+	std::string fmtoken() const { return fmtoken_; }
+
+	void set_currformid(const std::string &currformid) { currformid_ = currformid; }
+	std::string currformid() const { return currformid_; }
+private:
+	std::string cat_id_;
+	std::string catalog_id_;
+	std::string fmtoken_;
+	std::string currformid_;
+};
+
+class DoubanTaskInfo: public RobotTask {
+public:
+	DoubanTaskInfo() { type_ = DOUBAN; }
+	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
+	virtual RobotTaskBase* CreateTaskPacketUnit();
+	virtual std::string SerializeSelf();
 };
 
 class RobotTaskFactory {

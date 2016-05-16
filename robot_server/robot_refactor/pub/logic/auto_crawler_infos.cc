@@ -1,9 +1,13 @@
 //  Copyright (c) 2015-2015 The KID Authors. All rights reserved.
 //  Created on: 2015年9月14日 Author: kerry
+
 #include "auto_crawler_infos.h"
-#include "basic/radom_in.h"
-#include "net/comm_head.h"
-#include "basic/basic_util.h"
+
+#include <list>
+#include <sstream>
+
+#include "../../../library/public/basic/basic_util.h"
+#include "../net/comm_head.h"
 
 namespace base_logic {
 
@@ -295,14 +299,160 @@ std::string Taoguba::SerializeSelf() {
 	return os.str();
 }
 
+void WeiboTask::GetTaskId(base_logic::DictionaryValue* dict) {
+	RobotTask::GetTaskId(dict);
+}
+
+void WeiboTask::GetDataFromKafka(base_logic::DictionaryValue* dict) {
+	RobotTask::GetDataFromKafka(dict);
+	dict->GetString(L"topicId", &topic_id_);
+	dict->GetString(L"hostUin", &host_uin_);
+}
+
+void WeiboTask::GetDataFromDb(base_logic::DictionaryValue* dict) {
+	RobotTask::GetDataFromDb(dict);
+}
+
+RobotTaskBase* WeiboTask::CreateTaskPacketUnit() {
+	::WeiBoTask *weibo_task = new ::WeiBoTask();
+	RobotTask::SetTaskPacketUnit(weibo_task);
+	weibo_task->topic_id = topic_id_;
+	weibo_task->host_uin = host_uin_;
+	return weibo_task;
+}
+
+void WeiboTask::SetTaskPacketUnit(RobotTaskBase *task) {
+	RobotTask::SetTaskPacketUnit(task);
+}
+
+std::string WeiboTask::SerializeSelf() {
+	std::stringstream os;
+	os << RobotTask::SerializeSelf();
+	os << ", topic_id: " << topic_id_ << ", host_uin: " << host_uin_;
+	return os.str();
+}
+
+void TianyaTask::GetTaskId(base_logic::DictionaryValue* dict) {
+	RobotTask::GetTaskId(dict);
+}
+
+void TianyaTask::GetDataFromKafka(base_logic::DictionaryValue* dict) {
+	RobotTask::GetDataFromKafka(dict);
+	dict->GetString(L"preUrl", &url_);
+	dict->GetString(L"preTitle", &title_);
+	dict->GetString(L"preUserId", &user_id_);
+	dict->GetString(L"preUserName", &username_);
+	dict->GetBigInteger(L"prePostTime", &post_time_);
+}
+
+void TianyaTask::GetDataFromDb(base_logic::DictionaryValue* dict) {
+	RobotTask::GetDataFromDb(dict);
+}
+
+RobotTaskBase* TianyaTask::CreateTaskPacketUnit() {
+	::TianyaTask *tianya_task = new ::TianyaTask();
+	RobotTask::SetTaskPacketUnit(tianya_task);
+	tianya_task->pre_post_time = post_time_;
+	tianya_task->pre_url = url_;
+	tianya_task->pre_title = title_;
+	tianya_task->pre_user_id = user_id_;
+	tianya_task->pre_user_name = username_;
+	return tianya_task;
+}
+
+void TianyaTask::SetTaskPacketUnit(RobotTaskBase *task) {
+	RobotTask::SetTaskPacketUnit(task);
+}
+
+std::string TianyaTask::SerializeSelf() {
+	std::stringstream os;
+	os << RobotTask::SerializeSelf();
+	os << ", title: " << title_ << ", user_id: " << user_id_
+			<< ", user_name: " << username_;
+	return os.str();
+}
+
+void QZoneTask::GetDataFromKafka(base_logic::DictionaryValue* dict) {
+	RobotTask::GetDataFromKafka(dict);
+	dict->GetString(L"topicId", &topic_id_);
+	dict->GetBigInteger(L"hostUin", &host_uin_);
+}
+
+RobotTaskBase* QZoneTask::CreateTaskPacketUnit() {
+	::QzoneTask *qzone_task = new ::QzoneTask();
+	RobotTask::SetTaskPacketUnit(qzone_task);
+	qzone_task->host_uin = host_uin_;
+	qzone_task->topic_id = topic_id_;
+	return qzone_task;
+}
+
+std::string QZoneTask::SerializeSelf() {
+	std::stringstream os;
+	os << RobotTask::SerializeSelf();
+	os << ", topic_id: " << topic_id_ << ", host_uin: " << host_uin_;
+	return os.str();
+}
+
+void MaopuTaskInfo::GetDataFromKafka(base_logic::DictionaryValue* dict) {
+	RobotTask::GetDataFromKafka(dict);
+	dict->GetString(L"pre_url", &url_);
+	dict->GetString(L"cat_id", &cat_id_);
+	dict->GetString(L"catalog_id", &catalog_id_);
+	dict->GetString(L"fmtoken", &fmtoken_);
+	dict->GetString(L"currformid", &currformid_);
+}
+
+RobotTaskBase* MaopuTaskInfo::CreateTaskPacketUnit() {
+	::MaopuTask *task = new ::MaopuTask();
+	RobotTask::SetTaskPacketUnit(task);
+	task->pre_url = url_;
+	task->cat_id = cat_id_;
+	task->catalog_id = catalog_id_;
+	task->fmtoken = fmtoken_;
+	task->currformid = currformid_;
+	return task;
+}
+
+std::string MaopuTaskInfo::SerializeSelf() {
+	std::stringstream os;
+	os << RobotTask::SerializeSelf();
+	os << ", cat_id: " << cat_id_ << ", catalog_id: " << catalog_id_
+			<< ", fmtoken: " << fmtoken_ << ", currformid: " << currformid_;
+	return os.str();
+}
+
+void DoubanTaskInfo::GetDataFromKafka(base_logic::DictionaryValue* dict) {
+	RobotTask::GetDataFromKafka(dict);
+	dict->GetString(L"pre_url", &url_);
+}
+
+RobotTaskBase* DoubanTaskInfo::CreateTaskPacketUnit() {
+	::Douban *task = new ::Douban();
+	RobotTask::SetTaskPacketUnit(task);
+	task->pre_url = url_;
+	return task;
+}
+
+std::string DoubanTaskInfo::SerializeSelf() {
+	return RobotTask::SerializeSelf();
+}
+
 RobotTask* RobotTaskFactory::Create(RobotTask::TaskType type) {
 	switch(type) {
-//	case RobotTask::TIANYA:
-//		return new TianyaTask();
 	case RobotTask::TIEBA:
 		return new TiebaTask();
 	case RobotTask::TAOGUBA:
 		return new Taoguba();
+	case RobotTask::WEIBO:
+		return new WeiboTask();
+	case RobotTask::TIANYA:
+		return new TianyaTask();
+	case RobotTask::QZONE:
+		return new QZoneTask();
+	case RobotTask::MAOPU:
+		return new MaopuTaskInfo();
+	case RobotTask::DOUBAN:
+		return new DoubanTaskInfo();
 	default:
 		return NULL;
 	}

@@ -443,7 +443,7 @@ struct RobotTaskBase {
 	std::string addr;
 	uint16 ua_len;
 	std::string ua;
-	virtual bool SetData(::base_logic::RobotTask *task_info) = 0;
+//	virtual bool SetData(::base_logic::RobotTask *task_info) = 0;
 	virtual size_t size() const {
 		size_t sum = 0;
 		sum += sizeof(uint16) * 5 + sizeof(uint64) * 2 + cookie.size()
@@ -590,6 +590,196 @@ struct TaogubaTask: public RobotTaskBase {
 	}
 };
 
+struct WeiBoTask: public RobotTaskBase {
+	uint16 topic_id_len;
+	std::string topic_id;
+	uint16 host_uin_len;
+	std::string host_uin;
+	virtual size_t size() const {
+		size_t sum = RobotTaskBase::size();
+		sum += sizeof(uint16) * 2 + topic_id.size() + host_uin.size();
+		return sum;
+	}
+	virtual void SerializeSelf(packet::DataOutPacket &out) {
+		RobotTaskBase::SerializeSelf(out);
+		out.Write16(topic_id.size());
+		out.WriteData(topic_id.c_str(), topic_id.size());
+		out.Write16(host_uin.size());
+		out.WriteData(host_uin.c_str(), host_uin.size());
+	}
+	virtual int Print(char buf[], size_t size) {
+		std::string title = "-------- weibo task begin --------\n";
+		int write_bytes = snprintf(buf, size, title.c_str());
+		write_bytes += RobotTaskBase::Print(buf+write_bytes, size-write_bytes);
+		size -= write_bytes;
+		std::stringstream os;
+		PRINT(topic_id.size());
+		PRINT(topic_id);
+		PRINT(host_uin.size());
+		PRINT(host_uin);
+		os << "-------- weibo task end  --------" << std::endl;
+		return write_bytes + snprintf(buf+write_bytes, size, os.str().c_str());
+	}
+};
+
+struct TianyaTask: public RobotTaskBase {
+	uint64 pre_post_time;
+	uint16 pre_url_len;
+	std::string pre_url;
+	uint16 pre_title_len;
+	std::string pre_title;
+	uint16 pre_user_id_len;
+	std::string pre_user_id;
+	uint16 pre_user_name_len;
+	std::string pre_user_name;
+
+	virtual size_t size() const {
+		size_t sum = RobotTaskBase::size();
+		sum += sizeof(uint64) + sizeof(uint16) * 4 + pre_url.size()
+				+ pre_title.size() + pre_user_id.size() + pre_user_name.size();
+		return sum;
+	}
+	virtual void SerializeSelf(packet::DataOutPacket &out) {
+		RobotTaskBase::SerializeSelf(out);
+		out.Write64(pre_post_time);
+		out.Write16(pre_url.size());
+		out.WriteData(pre_url.c_str(), pre_url.size());
+		out.Write16(pre_title.size());
+		out.WriteData(pre_title.c_str(), pre_title.size());
+		out.Write16(pre_user_id.size());
+		out.WriteData(pre_user_id.c_str(), pre_user_id.size());
+		out.Write16(pre_user_name.size());
+		out.WriteData(pre_user_name.c_str(), pre_user_name.size());
+	}
+	virtual int Print(char buf[], size_t size) {
+		std::string title = "-------- tianya task begin --------\n";
+		int write_bytes = snprintf(buf, size, title.c_str());
+		write_bytes += RobotTaskBase::Print(buf+write_bytes, size-write_bytes);
+		size -= write_bytes;
+		std::stringstream os;
+		PRINT(pre_post_time);
+		PRINT(pre_url.size());
+		PRINT(pre_url);
+		PRINT(pre_title.size());
+		PRINT(pre_title);
+		PRINT(pre_user_id.size());
+		PRINT(pre_user_id);
+		PRINT(pre_user_name.size());
+		PRINT(pre_user_name);
+		os << "-------- tianya task end  --------" << std::endl;
+		return write_bytes + snprintf(buf+write_bytes, size, os.str().c_str());
+	}
+};
+
+struct QzoneTask: public RobotTaskBase {
+	uint64 host_uin;
+	uint16 topic_id_len;
+	std::string topic_id;
+
+	virtual size_t size() const {
+		size_t sum = RobotTaskBase::size();
+		sum += sizeof(uint64) + sizeof(uint16) * 1 + topic_id.size();
+		return sum;
+	}
+
+	virtual void SerializeSelf(packet::DataOutPacket &out) {
+		RobotTaskBase::SerializeSelf(out);
+		out.Write64(host_uin);
+		out.Write16(topic_id.size());
+		out.WriteData(topic_id.c_str(), topic_id.size());
+	}
+	virtual int Print(char buf[], size_t size) {
+		std::string title = "-------- Qzone task begin --------\n";
+		int write_bytes = snprintf(buf, size, title.c_str());
+		write_bytes += RobotTaskBase::Print(buf+write_bytes, size-write_bytes);
+		size -= write_bytes;
+		std::stringstream os;
+		PRINT(host_uin);
+		PRINT(topic_id.size());
+		PRINT(topic_id);
+		os << "-------- Qzone task end  --------" << std::endl;
+		return write_bytes + snprintf(buf+write_bytes, size, os.str().c_str());
+	}
+};
+
+struct MaopuTask: public RobotTaskBase {
+	uint16 pre_url_len;
+	std::string pre_url;
+	uint16 cat_id_len;
+	std::string cat_id;
+	uint16 catalog_id_len;
+	std::string catalog_id;
+	uint16 fmtoken_len;
+	std::string fmtoken;
+	uint16 currformid_len;
+	std::string currformid;
+
+	virtual size_t size() const {
+		size_t sum = RobotTaskBase::size();
+		sum += sizeof(uint16) * 5 + pre_url.size() + cat_id.size()
+				+ catalog_id.size() + fmtoken.size() + currformid.size();
+		return sum;
+	}
+
+	virtual void SerializeSelf(packet::DataOutPacket &out) {
+#define WRITE_STRING(v) 	\
+	out.Write16(v.size());	\
+	out.WriteData(v.c_str(), v.size())
+
+		RobotTaskBase::SerializeSelf(out);
+		WRITE_STRING(pre_url);
+		WRITE_STRING(cat_id);
+		WRITE_STRING(catalog_id);
+		WRITE_STRING(fmtoken);
+		WRITE_STRING(currformid);
+	}
+
+#define PRINT_STRING(v)	\
+	PRINT(v.size());	\
+	PRINT(v)
+
+	virtual int Print(char buf[], size_t size) {
+		std::string title = "-------- Maopu task begin --------\n";
+		int write_bytes = snprintf(buf, size, title.c_str());
+		write_bytes += RobotTaskBase::Print(buf+write_bytes, size-write_bytes);
+		size -= write_bytes;
+		std::stringstream os;
+		PRINT_STRING(pre_url);
+		PRINT_STRING(cat_id);
+		PRINT_STRING(catalog_id);
+		PRINT_STRING(fmtoken);
+		PRINT_STRING(currformid);
+		os << "-------- Maopu task end  --------" << std::endl;
+		return write_bytes + snprintf(buf+write_bytes, size, os.str().c_str());
+	}
+};
+
+struct Douban: public RobotTaskBase {
+	uint16 pre_url_len;
+	std::string pre_url;
+
+	virtual size_t size() const {
+		size_t sum = RobotTaskBase::size();
+		sum += sizeof(uint16) * 1 + pre_url.size();
+		return sum;
+	}
+
+	virtual void SerializeSelf(packet::DataOutPacket &out) {
+		RobotTaskBase::SerializeSelf(out);
+		WRITE_STRING(pre_url);
+	}
+
+	virtual int Print(char buf[], size_t size) {
+		std::string title = "-------- Douban task begin --------\n";
+		int write_bytes = snprintf(buf, size, title.c_str());
+		write_bytes += RobotTaskBase::Print(buf+write_bytes, size-write_bytes);
+		size -= write_bytes;
+		std::stringstream os;
+		PRINT_STRING(pre_url);
+		os << "-------- Douban task end  --------" << std::endl;
+		return write_bytes + snprintf(buf+write_bytes, size, os.str().c_str());
+	}
+};
 
 class RobotTaskPacketFactory {
 public:
