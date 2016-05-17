@@ -508,8 +508,9 @@ public:
        return data_->is_read;
    }
 
-   const time_t get_update_time() const {
-       return data_->update_last_time_;
+   void update_use_time() { data_->last_use_time_ = time(NULL); }
+   const time_t last_use_time() const {
+       return data_->last_use_time_;
    }
 
    const int64 cookie_id() const {return data_->cookie_id_;}
@@ -540,7 +541,7 @@ public:
            int64        cookie_id_;
            int64        cookie_attr_id_;
            time_t       send_last_time_;
-           time_t       update_last_time_;
+           time_t       last_use_time_;
            std::string  cookie_body;
            std::string  username;
            std::string  passwd;
@@ -638,13 +639,14 @@ class RobotTask {
 public:
 	enum TaskType {
 		UNKNOWN,
-		WEIBO,
-		QZONE,
 		TIEBA = 7001,
+		WEIBO = 7002,
+		TIANYA = 7003,
+		QZONE = 7004,
+		MAOPU = 7005,
+		DOUBAN = 7006,
 		TAOGUBA = 7007,
-		TIANYA,
-		MAOPU,
-		DOUBAN
+		SNOWBALL = 7008
 	};
 
 	RobotTask()
@@ -682,12 +684,6 @@ public:
 	void set_cookie(base_logic::LoginCookie &cookie) { cookie_ = cookie; }
 	base_logic::LoginCookie cookie() const { return cookie_; }
 
-	void set_ua(base_logic::ForgeryUA &ua) { ua_ = ua; }
-	base_logic::ForgeryUA ua() const { return ua_; }
-
-	void set_ip(base_logic::ForgeryIP &ip) { ip_ = ip; }
-	base_logic::ForgeryIP ip() const { return ip_; }
-
 	void set_content(base_logic::RobotTaskContent &con) { content_ = con; }
 	base_logic::RobotTaskContent content() const { return content_; }
 
@@ -699,8 +695,6 @@ protected:
 	time_t		create_time_;
 	time_t		send_time_;
 	base_logic::LoginCookie 		cookie_;
-	base_logic::ForgeryUA 			ua_;
-	base_logic::ForgeryIP			ip_;
 	base_logic::RobotTaskContent	content_;
 };
 
@@ -864,6 +858,19 @@ public:
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual std::string SerializeSelf();
+};
+
+class SnowballTaskInfo: public RobotTask {
+public:
+	SnowballTaskInfo() { type_ = SNOWBALL; }
+	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
+	virtual RobotTaskBase* CreateTaskPacketUnit();
+	virtual std::string SerializeSelf();
+public:
+	void set_topic_id(const std::string topic_id) { topic_id_ = topic_id; }
+	std::string topic_id() const { return topic_id_; }
+private:
+	std::string topic_id_;
 };
 
 class RobotTaskFactory {

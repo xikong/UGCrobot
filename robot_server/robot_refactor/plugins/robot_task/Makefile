@@ -95,6 +95,15 @@ crawler_task_db.o : ./crawler_task_db.cc ./crawler_task_db.h
 crawler_task_kafka.o : ./crawler_task_kafka.cc ./crawler_task_kafka.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./crawler_task_kafka.cc $(INCLUDE_PATHS)
 
+cookie_engine.o : ./cookie_engine.cc ./cookie_engine.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./cookie_engine.cc $(INCLUDE_PATHS)
+
+forgery_ip_engine.o : ./forgery_ip_engine.cc ./forgery_ip_engine.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./forgery_ip_engine.cc $(INCLUDE_PATHS)
+
+forgery_ua_engine.o : ./forgery_ua_engine.cc ./forgery_ua_engine.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./forgery_ua_engine.cc $(INCLUDE_PATHS)
+
 task_schduler_engine.o : ./task_schduler_engine.cc ./task_schduler_engine.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./task_schduler_engine.cc $(INCLUDE_PATHS)
 
@@ -156,7 +165,7 @@ zip.o:$(LIB_DIR)/public/basic/zip.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(LIB_DIR)/public/basic/zip.cc $(INCLUDE_PATHS)
 	
 
-$(PLUGIN) : crawler_task_init.o  crawler_task_logic.o crawler_task_db.o crawler_task_kafka.o task_schduler_engine.o task_time_manager.o\
+$(PLUGIN) : crawler_task_init.o  crawler_task_logic.o crawler_task_db.o crawler_task_kafka.o cookie_engine.o forgery_ip_engine.o forgery_ua_engine.o task_schduler_engine.o task_time_manager.o\
 	packet_processing.o logic_unit.o auto_crawler_infos.o mem_controller.o mysql_controller.o\
 	redis_controller.o storage_controller_engine.o\
 	mig_log.o basictypes.o basic_util.o config.o md5sum.o radom_in.o data_packet.o native_library.o tea.o unzip.o zip.o\

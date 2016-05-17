@@ -246,48 +246,51 @@ bool RouterSchdulerManager::SetRecvErrorCount(int socket) {
 }
 
 bool RouterSchdulerManager::SendOptimalRouter(const void* data,
-        const int32 len, int16 crawler_type) {
-    base_logic::WLockGd lk(lock_);
-    LOG_MSG2("router count: %d", schduler_cache_->router_scheduler_list_.size());
-    if (schduler_cache_->router_scheduler_list_.size() <= 0) {
-        return false;
-    }
-
-    base_logic::RouterScheduler schduler;
-    schduler.set_idle_tasks(crawler_type, 0);
-    RouterSchedulerList::iterator it = schduler_cache_->router_scheduler_list_.begin();
-    LOG_DEBUG("-------------------------router task count begin-------------------------");
-    for (; it != schduler_cache_->router_scheduler_list_.end(); it++) {
-	LOG_DEBUG2("router_id = %d, crawler_type = %d, idle tasks = %d", it->id(), crawler_type,  it->idle_tasks(crawler_type));
-        if (!(*it).is_effective() || !(*it).has_crawler_type(crawler_type)) {
-	    LOG_DEBUG2("router[%d] is not effective or has no crawler type: %d", it->id(), crawler_type);
-	    continue;
-        }
-	if (!base_logic::superior_to(schduler, *it, crawler_type)) {
-		schduler = *it;
-		LOG_DEBUG("schduler superior to *it");
+        const int32 len,
+		int16 crawler_type) {
+	base_logic::WLockGd lk(lock_);
+	LOG_MSG2("router count: %d", schduler_cache_->router_scheduler_list_.size());
+	if (schduler_cache_->router_scheduler_list_.size() <= 0) {
+		return false;
 	}
-    }
-    LOG_DEBUG("------------------------- router task count end -------------------------");
 
-    LOG_DEBUG2("schduler->idle_tasks=%d", schduler.idle_tasks(crawler_type));
-    if (schduler.idle_tasks(crawler_type) == 0)
-        return false;
-    struct PacketHead* packet = (struct PacketHead*)data;
-    struct AssignmentMultiTask* multi_task =
-            (struct AssignmentMultiTask*)packet;
-    multi_task->crawler_type = crawler_type;
+	base_logic::RouterScheduler schduler;
+	schduler.set_idle_tasks(crawler_type, 0);
+	RouterSchedulerList::iterator it =
+			schduler_cache_->router_scheduler_list_.begin();
+	LOG_DEBUG("-------------------------router task count begin-------------------------");
+	for (; it != schduler_cache_->router_scheduler_list_.end(); it++) {
+		LOG_DEBUG2("router_id = %d, crawler_type = %d, idle tasks = %d", it->id(), crawler_type, it->idle_tasks(crawler_type));
+		if (!(*it).is_effective() || !(*it).has_crawler_type(crawler_type)) {
+			LOG_DEBUG2("router[%d] is not effective or has no crawler type: %d", it->id(), crawler_type);
+			continue;
+		}
+		if (!base_logic::superior_to(schduler, *it, crawler_type)) {
+			schduler = *it;
+			LOG_DEBUG("schduler superior to *it");
+		}
+	} LOG_DEBUG("------------------------- router task count end -------------------------");
 
-    if (!send_message(schduler.socket(), packet)) {
-        schduler.add_send_error_count();
-        schduler.set_is_effective(false);
-        LOG_MSG2("schduler.socket()=%d,error msg=%s", (int)schduler.socket(), strerror(errno));
+	LOG_DEBUG2("schduler->idle_tasks=%d", schduler.idle_tasks(crawler_type));
+	if (schduler.idle_tasks(crawler_type) == 0)
+		return false;
+	struct PacketHead* packet = (struct PacketHead*) data;
+	struct AssignmentMultiTask* multi_task =
+			(struct AssignmentMultiTask*) packet;
+	multi_task->crawler_type = crawler_type;
+
+	if (!send_message(schduler.socket(), packet)) {
+		schduler.add_send_error_count();
+		schduler.set_is_effective(false);
+		LOG_MSG2("schduler.socket()=%d,error msg=%s", (int)schduler.socket(), strerror(errno));
 	} else {
 		time_t t = time(NULL);
-		LOG_MSG2("[%s] Assign tasks to router[%d], socket = %d", 
-				ctime(&t), schduler.id(), schduler.socket());
+		char *str_time = ctime(&t);
+		str_time[strlen(str_time)-1] = '\0';
+		LOG_MSG2("[%s] Assign tasks to router[%d], socket = %d",
+				str_time, schduler.id(), schduler.socket());
 	}
-    return true;
+	return true;
 }
 
 bool RouterSchdulerManager::SetRouterIdToRouter(uint32 router_id, int socket) {

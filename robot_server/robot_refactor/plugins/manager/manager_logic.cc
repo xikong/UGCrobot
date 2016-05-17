@@ -12,8 +12,8 @@
 
 #define DEFAULT_CONFIG_PATH     "./plugins/manager/manager_config.xml"
 
-#define TIMER_MANAGER_START	10000
-#define TIMER_HEART		10001
+#define TIMER_MANAGER_START		10000
+#define TIMER_HEART				10001
 #define TIMER_SEND_SELF_STATE	10002
 
 #define	ROUTER_REG_SUCCESS	1
@@ -164,8 +164,9 @@ int Managerlogic::BuildSlbSession() {
 void Managerlogic::CloseSlbSession(int socket) {
 	if (socket <= 0)
 		return;
-
 	base_logic::MLockGd lk(data_->lock_);
+	// 连接断开，清除服务器验证信息
+	data_->svr_info.Reset();
 	plugin_share::SlbSessionMap &slb_session_map = data_->slb_session_map_;
 	plugin_share::SlbSessionMap::iterator it = slb_session_map.find(socket);
 	if (slb_session_map.end() != it) {
@@ -233,15 +234,12 @@ bool Managerlogic::SendHeart() {
 			LOG_MSG2("send heart to slb error, socket = %d", slb_sock);
 			CloseSlbSession(slb_sock);
 		} else {
-			LOG_DEBUG("succeed to send heart to slb");
+			std::string addr;
+			logic::SomeUtils::GetAddressBySocket(slb_sock, addr);
+			LOG_DEBUG2("succeed to send heart to slb, socket = %d, addr = %s",
+					slb_sock, addr.c_str());
 		}
 	}
-//	if (all_router_is_invalid) {
-//		LOG_MSG("all router is invalid, reconnect to slb");
-//		if (!RegSelf()) {
-//			LOG_MSG("reconnect to slb fail");
-//		}
-//	}
 	LOG_DEBUG2("slb session count: %d", data_->slb_session_map_.size()); LOG_DEBUG2("router count: %d", data_->router_map.size());
 	return ret;
 }
@@ -356,6 +354,19 @@ bool Managerlogic::OnManagerClose(struct server *srv, const int socket) {
 
 bool Managerlogic::OnBroadcastConnect(struct server *srv, const int socket,
 		const void *msg, const int len) {
+//	std::string ip;
+//	uint32 port;
+//	base_logic::MLockGd lk(data_->lock_);
+//
+//	if (NULL != data_ && logic::SomeUtils::GetAddressBySocket(socket, ip, port)) {
+//		uint32 slb_port = atoi(config_->port_.c_str());
+//		if (port == slb_port) {
+//			RegSelf();
+//			LOG_MSG2("new connection to slb, socket = %d, ip = %s, port = %d, "
+//					"register self", socket, ip.c_str(), port);
+//		}
+//	}
+
 	return HandleAllConnect(__FUNCTION__, srv, socket);
 }
 

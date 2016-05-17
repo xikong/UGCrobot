@@ -155,6 +155,8 @@ LoginCookie::LoginCookie(const LoginCookie& login_cookie)
 :data_(login_cookie.data_) {
     if (data_ != NULL)
         data_->AddRef();
+    ip_ = login_cookie.ip_;
+    ua_ = login_cookie.ua_;
 }
 
 LoginCookie& LoginCookie::operator=(const LoginCookie& login_cookie) {
@@ -163,13 +165,15 @@ LoginCookie& LoginCookie::operator=(const LoginCookie& login_cookie) {
     if (data_ != NULL)
         data_->Release();
     data_ = login_cookie.data_;
+    ip_ = login_cookie.ip_;
+    ua_ = login_cookie.ua_;
     return (*this);
 }
 
 void LoginCookie::ValueSerialization(base_logic::DictionaryValue* dict) {
     dict->GetBigInteger(L"cookie_id", &data_->cookie_id_);
     dict->GetBigInteger(L"cookie_attr_id", &data_->cookie_attr_id_);
-    dict->GetBigInteger(L"last_time", &data_->update_last_time_);
+    dict->GetBigInteger(L"last_time", &data_->last_use_time_);
     dict->GetString(L"cookie_body", &data_->cookie_body);
     dict->GetString(L"username", &data_->username);
     dict->GetString(L"passwd", &data_->passwd);
@@ -215,8 +219,6 @@ void RobotTask::SetTaskPacketUnit(RobotTaskBase *task) {
 	task->cookie = cookie_.get_cookie_body();
 	task->ua = cookie_.ua_.ua();
 	task->addr = cookie_.ip_.ip();
-//	task->ua = ua_.ua();
-//	task->addr = ip_.ip();
 	task->content = content_.content();
 }
 
@@ -437,6 +439,27 @@ std::string DoubanTaskInfo::SerializeSelf() {
 	return RobotTask::SerializeSelf();
 }
 
+void SnowballTaskInfo::GetDataFromKafka(base_logic::DictionaryValue* dict) {
+	RobotTask::GetDataFromKafka(dict);
+	dict->GetString(L"pre_url", &url_);
+	dict->GetString(L"topic_id", &topic_id_);
+}
+
+RobotTaskBase* SnowballTaskInfo::CreateTaskPacketUnit() {
+	SnowBall *task = new SnowBall();
+	RobotTask::SetTaskPacketUnit(task);
+	task->pre_url = url_;
+	task->topic_id = topic_id_;
+	return task;
+}
+
+std::string SnowballTaskInfo::SerializeSelf() {
+	std::stringstream os;
+	os << RobotTask::SerializeSelf();
+	os << ", topic_id: " << topic_id_;
+	return os.str();
+}
+
 RobotTask* RobotTaskFactory::Create(RobotTask::TaskType type) {
 	switch(type) {
 	case RobotTask::TIEBA:
@@ -453,6 +476,8 @@ RobotTask* RobotTaskFactory::Create(RobotTask::TaskType type) {
 		return new MaopuTaskInfo();
 	case RobotTask::DOUBAN:
 		return new DoubanTaskInfo();
+	case RobotTask::SNOWBALL:
+		return new SnowballTaskInfo();
 	default:
 		return NULL;
 	}

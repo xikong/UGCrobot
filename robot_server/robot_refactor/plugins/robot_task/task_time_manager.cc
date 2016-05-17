@@ -4,11 +4,15 @@
 #include <list>
 #include "task_time_manager.h"
 #include "logic/logic_unit.h"
+#include "cookie_engine.h"
+#include "forgery_ip_engine.h"
 
 namespace robot_task_logic {
 
 TaskTimeManager::TaskTimeManager(robot_task_logic::CrawlerTaskDB* task_db) {
     schduler_mgr_ =  robot_task_logic::TaskSchdulerEngine::GetTaskSchdulerManager();
+    cookie_mgr_ = CookieEngine::GetCookieManager();
+    forgery_ip_mgr_ = ForgeryIPEngine::GetForgeryIPManager();
     task_db_.reset(task_db);
     manager_info_ = NULL;
 }
@@ -40,10 +44,10 @@ void TaskTimeManager::TaskTimeEvent(int opcode, int time) {
     	UpdateExecTasks();
         break;
       case TIME_FETCH_IP:
-    	  schduler_mgr_->SetBatchIP();
+    	  forgery_ip_mgr_->SetIPs();
     	  break;
-      case TIME_FETCH_COOKIE:
-    	  schduler_mgr_->SetBatchCookies();
+      case TIME_WRITE_COOKIE_USE_TIME:
+    	  cookie_mgr_->WriteCookieUseTime(0);
     	  break;
       case TIME_FETCH_CONTENT:
     	  schduler_mgr_->SetBatchContents();

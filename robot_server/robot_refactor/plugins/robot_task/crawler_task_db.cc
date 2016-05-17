@@ -40,6 +40,21 @@ bool CrawlerTaskDB::UpdateCookie(int64 cookie_id, int is_valid) {
     return true;
 }
 
+bool CrawlerTaskDB::UpdateCookieAccessTime(int64 cookie_id, time_t last_access_time) {
+    bool r = false;
+    scoped_ptr<base_logic::DictionaryValue> dict(
+                    new base_logic::DictionaryValue());
+    std::stringstream os;
+    os << "call proc_UpdateCookieAccessTime(" << cookie_id << "," << last_access_time << ")";
+    std::string sql = os.str();
+    base_logic::ListValue* listvalue;
+    dict->SetString(L"sql", sql);
+    r = mysql_engine_->WriteData(0, (base_logic::Value*)(dict.get()));
+    if (!r)
+        return r;
+    return true;
+}
+
 bool CrawlerTaskDB::BindIPToCookie(int64 cookie_id, int64 ip_id, const std::string &ip) {
     bool r = false;
     scoped_ptr<base_logic::DictionaryValue> dict(
@@ -169,8 +184,7 @@ bool CrawlerTaskDB::FetchBatchTaskContent(int16 task_type,
 	if (is_new) {
 		os << "call proc_FetchNewContent(" << task_type << ")";
 		sql = os.str();
-	}
-	else {
+	} else {
 		sql = "call proc_FecthBatchContent()";
 	}
 	base_logic::ListValue* listvalue;
@@ -225,12 +239,12 @@ void CrawlerTaskDB::CallBackFetchBatchContent(void* param,
     dict->Set(L"resultvalue", (base_logic::Value*)(list));
 }
 
-bool CrawlerTaskDB::GetCookies(int count, uint64 last_time, std::list<base_logic::LoginCookie>* cookies_list) {
+bool CrawlerTaskDB::GetCookies(int count, uint64 attr_id, uint64 usable_time, std::list<base_logic::LoginCookie>* cookies_list) {
     bool r = false;
     scoped_ptr<base_logic::DictionaryValue> dict(
             new base_logic::DictionaryValue());
 	std::stringstream os;
-	os << "call proc_GetRobotCookiesV1(" << count << "," << last_time << ")";
+	os << "call proc_GetRobotCookiesV2(" << count << "," << attr_id << "," << usable_time << ")";
     std::string sql = os.str();
 
     base_logic::ListValue* listvalue;
@@ -282,10 +296,6 @@ void CrawlerTaskDB::CallBackGetCookies(void* param,
             if (rows[2] != NULL) {
                 int64 last_time = atoll(rows[2]);
                 info_value->SetBigInteger(L"last_time", last_time);
-                int64& last_update_time =
-                    schduler_manager->GetDatabaseUpdateTimeByPlatId(attr_id);
-                if (last_time > last_update_time)
-                    last_update_time = last_time;
             }
             if (rows[3] != NULL)
                 info_value->SetString(L"cookie_body", rows[3]);
@@ -401,7 +411,7 @@ bool CrawlerTaskDB::UpdateRobotTaskDetail(base_logic::RobotTask *task) {
     std::string sql;
     std::stringstream os;
     os << "call proc_UpdateRobotTaskDetail(" << task->id() << "," << task->cookie().cookie_id()
-    								   << "," << task->ua().id() << "," << task->ip().id()
+    								   << "," << task->cookie().ua_.id() << "," << task->cookie().ip_.id()
 									   << "," << task->content().id() << ",\'" << task->SerializeSelf()
 									   << "\', " << task->state() << ")";
     sql = os.str();

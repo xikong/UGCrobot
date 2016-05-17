@@ -6,6 +6,29 @@
 
 namespace plugin_share {
 
+class Client {
+public:
+	enum Type {
+		SERVER,
+		ROUTER,
+		SLB
+	};
+	enum VerifyState {
+	    VERIFY_STATE_UNVERIFIED,
+	    VERIFY_STATE_SUCCESS,
+	    VERIFY_STATE_FAILED
+	};
+private:
+	Type type_;
+	int32 id_;
+	VerifyState verify_state_;
+	std::string ip_;
+	uint16 port_;
+	std::string mac_;
+	std::string password_;
+	char token_[TOKEN_SIZE];
+};
+
 typedef struct ServerInfo {
 	uint16 type;
 	uint32 id;
@@ -21,6 +44,13 @@ typedef struct ServerInfo {
 		id = 0;
 		verify_state = VERIFY_STATE_UNVERIFIED;
 		port = 0;
+		memset(token, '\0', TOKEN_SIZE);
+		max_tasks = 300;
+		exec_tasks = 0;
+	}
+	void Reset() {
+		id = 0;
+		verify_state = VERIFY_STATE_UNVERIFIED;
 		memset(token, '\0', TOKEN_SIZE);
 		max_tasks = 300;
 		exec_tasks = 0;

@@ -8,7 +8,7 @@
 #include "net/comm_head.h"
 #include "net/packet_processing.h"
 #include <pthread.h>
-#include "share/manager_info.h"
+#include "../../pub/share/manager_info.h"
 
 namespace manager_logic {
 class Managerlogic {

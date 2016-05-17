@@ -14,7 +14,7 @@
 //#define TIMER_SERVER_STARTUP		 10002
 
 #define TIME_FETCH_IP				 10003	// 10s, 更新一次
-#define TIME_FETCH_COOKIE			 10004	// 60s, 更新一次
+#define TIME_WRITE_COOKIE_USE_TIME			 10004	// 60s, 更新一次
 
 #define TIME_CLEAN_NO_EFFECTIVE      10005
 #define TIME_RECYCLINGTASK           10006
@@ -23,6 +23,10 @@
 #define TIME_UPDATE_EXEC_TASKS		 10009
 
 #define TIME_FETCH_CONTENT			 10010	// 10s, 更新一次
+
+class CookieManager;
+class ForgeryIPManager;
+//class ForgeryUAManager;
 
 namespace robot_task_logic {
 
@@ -44,10 +48,12 @@ private:
 	void UpdateExecTasks();
 
 private:
-	robot_task_logic::TaskSchdulerManager* schduler_mgr_;
+	robot_task_logic::TaskSchdulerManager* 		schduler_mgr_;
+	CookieManager								*cookie_mgr_;
+	ForgeryIPManager							*forgery_ip_mgr_;
 	scoped_ptr<robot_task_logic::CrawlerTaskDB> task_db_;
-	CrawlerTaskKafka task_kafka_;
-	plugin_share::ManagerInfo *manager_info_;
+	CrawlerTaskKafka 							task_kafka_;
+	plugin_share::ManagerInfo 					*manager_info_;
 };
 
 }  //  namespace crawler_task_logic

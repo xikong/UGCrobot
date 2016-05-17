@@ -781,6 +781,36 @@ struct Douban: public RobotTaskBase {
 	}
 };
 
+struct SnowBall: public RobotTaskBase {
+	uint16			pre_url_len;
+	std::string		pre_url;
+	uint16			topic_id_len;
+	std::string		topic_id;
+	virtual size_t size() const {
+		size_t sum = RobotTaskBase::size();
+		sum += sizeof(uint16) * 2 + pre_url.size() + topic_id.size();
+		return sum;
+	}
+
+	virtual void SerializeSelf(packet::DataOutPacket &out) {
+		RobotTaskBase::SerializeSelf(out);
+		WRITE_STRING(pre_url);
+		WRITE_STRING(topic_id);
+	}
+
+	virtual int Print(char buf[], size_t size) {
+		std::string title = "-------- SnowBall task begin --------\n";
+		int write_bytes = snprintf(buf, size, title.c_str());
+		write_bytes += RobotTaskBase::Print(buf+write_bytes, size-write_bytes);
+		size -= write_bytes;
+		std::stringstream os;
+		PRINT_STRING(pre_url);
+		PRINT_STRING(topic_id);
+		os << "-------- SnowBall task end  --------" << std::endl;
+		return write_bytes + snprintf(buf+write_bytes, size, os.str().c_str());
+	}
+};
+
 class RobotTaskPacketFactory {
 public:
 	static RobotTaskBase* Create(base_logic::RobotTask::TaskType type) {

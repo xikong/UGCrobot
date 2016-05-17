@@ -9,6 +9,9 @@
 #include "task_schduler_engine.h"
 #include "net/packet_processing.h"
 #include "crawler_task_logic.h"
+#include "forgery_ip_engine.h"
+#include "forgery_ua_engine.h"
+#include "cookie_engine.h"
 
 namespace robot_task_logic {
 
@@ -17,33 +20,13 @@ using namespace base_logic;
 TaskSchdulerManager* TaskSchdulerEngine::schduler_mgr_ = NULL;
 TaskSchdulerEngine* TaskSchdulerEngine::schduler_engine_ = NULL;
 
-bool CookieCache::GetCookie(int64 attr_id, base_logic::LoginCookie &cookie) {
-	time_t current_time = time(NULL);
-	if (cookie_map_.end() == cookie_map_.find(attr_id)) {
-		LOG_MSG2("can't find the cookie with the attr_id: %d", attr_id);
-		return false;
-	}
-	struct CookiePlatform &platform = cookie_map_[attr_id];
-	if (platform.list.end() == platform.cur_it)
-		platform.cur_it = platform.list.begin();
-	cookie = *platform.cur_it;
-	if ((cookie.send_last_time() + config_->cookie_use_tick) > current_time) {
-		LOG_MSG("cookie use too often");
-		return false;
-	}
-	++platform.cur_it;
-	cookie.update_time();
-	return true;
-}
-
 TaskSchdulerManager::TaskSchdulerManager() :
 		crawler_count_(0), task_db_(NULL), manager_info_(NULL) {
 	task_cache_ = new TaskSchdulerCache();
-	cookie_cache_ = new CookieCache();
-	ip_cache_ = new IPCache();
+	cookie_cache_ = CookieEngine::GetCookieManager();
+	ip_cache_ = ForgeryIPEngine::GetForgeryIPManager();
 	content_cache_ = new TaskContentCache();
-	cookie_ip_manager_ = new CookieIpEngine();
-	ua_cache_ = new ForgeryUACache();
+	ua_cache_ = ForgeryUAEngine::GetForgeryUAManager();
 	Init();
 }
 
@@ -57,86 +40,31 @@ void TaskSchdulerManager::Init() {
 
 void TaskSchdulerManager::InitDB(robot_task_logic::CrawlerTaskDB* task_db) {
 	task_db_ = task_db;
-	cookie_cache_->SetTaskDb(task_db);
-	SetBatchIP();
-	task_db_->FectchBatchForgeryUA(&ua_cache_->ua_list_);
-	SetBatchCookies();
-	SetBatchContents();
 
-	// test
-	cookie_cache_->BindForgeryIP(*ip_cache_);
-	cookie_cache_->BindForgeryUA(*ua_cache_);
-	cookie_cache_->SortCookies();
+	// ip 在定时任务中更新
+	ip_cache_->Init(task_db);
+
+	// UA 只获取一次
+	ua_cache_->Init(task_db);
+	SetBatchContents();
 }
 
 void TaskSchdulerManager::Init(
 		router_schduler::SchdulerEngine* crawler_engine, Config *config) {
 	crawler_schduler_engine_ = crawler_engine;
 	config_ = config;
-	cookie_cache_->SetConfig(config);
+	cookie_cache_->Init(config, task_db_);
 }
 
 void TaskSchdulerManager::InitManagerInfo(plugin_share::ManagerInfo *info) {
 	manager_info_ = info;
 }
 
-void TaskSchdulerManager::SetBatchIP() {
-	base_logic::WLockGd lk(lock_);
-	std::list<base_logic::ForgeryIP> ip_list;
-	task_db_->FectchBatchForgeryIP(&ip_list);
-	ip_cache_->Update(ip_list);
-//	ip_cache_->Reset();
-	cookie_ip_manager_->Update(ip_list);
-}
-
-void TaskSchdulerManager::SetBatchCookies() {
-	std::list<base_logic::LoginCookie> list;
-	base_logic::WLockGd lk(lock_);
-	task_db_->GetCookies(GET_COOKIES_PER_TIME, cookie_cache_->last_time, &list);
-	cookie_ip_manager_->Update(list, ip_cache_->ip_list_);
-	while (list.size() > 0) {
-		base_logic::LoginCookie info = list.front();
-		list.pop_front();
-		SetCookie(info);
-	}
-}
-
-bool TaskSchdulerManager::RemoveInvalidCookie(int64 cookie_id) {
-	return cookie_cache_->RemoveInvalidCookie(cookie_id);
-}
-
-void TaskSchdulerManager::SetCookie(const base_logic::LoginCookie& info) {
-	CookiePlatform& platform =
-			cookie_cache_->cookie_map_[info.get_cookie_attr_id()];
-	CookieList& list = platform.list;
-	for (CookieList::iterator it = list.begin(); it != list.end();) {
-		if (info.get_username() == it->get_username()
-				&& info.get_passwd() == it->get_passwd()) {
-			LOG_MSG2("erase old cookie username=%s passwd=%s",
-					info.get_username().c_str(), info.get_passwd());
-			list.erase(it++);
-			break;
-		} else {
-			++it;
-		}
-	}
-	platform.list.push_back(info);
-	int64 info_update_time = info.get_update_time();
-	platform.update_time_ = info_update_time;
-	int64& plat_update_time = GetDatabaseUpdateTimeByPlatId(
-			info.get_cookie_attr_id());
-	if (plat_update_time < info_update_time)
-		plat_update_time = info_update_time;
-
-	if (info_update_time > cookie_cache_->last_time)
-		cookie_cache_->last_time = plat_update_time;
-}
-
 void TaskSchdulerManager::SetBatchContents() {
 	std::list<base_logic::RobotTaskContent> list;
 	base_logic::WLockGd lk(lock_);
-	task_db_->FetchBatchTaskContent((int16) base_logic::RobotTask::TIEBA,
-			&list);
+	task_db_->FetchBatchTaskContent(0,
+			&list, false);
 	LOG_DEBUG2("task content size: %d", list.size());
 	while (list.size() > 0) {
 		base_logic::RobotTaskContent &con = list.front();
@@ -157,14 +85,10 @@ void TaskSchdulerManager::SetContent(const base_logic::RobotTaskContent &con) {
 void TaskSchdulerManager::FetchBatchTask(
 		std::list<base_logic::RobotTask *> *list, bool is_first) {
 	base_logic::WLockGd lk(lock_);
-	base_logic::ForgeryUA ua;
 	time_t current_time = time(NULL);
-//	ua_cache_->SortUABySendTime();
 	while ((*list).size() > 0) {
 		base_logic::RobotTask *info = (*list).front();
 		(*list).pop_front();
-		ua_cache_->GetUA(ua);
-//		info->set_ua(ua);
 		task_cache_->task_idle_map_[info->id()] = info;
 	}
 }
@@ -232,24 +156,15 @@ bool TaskSchdulerManager::DistributionTask() {
 	int32 count = task_cache_->task_idle_map_.size();
 	int32 index = 0;
 
-	cookie_cache_->BindForgeryIP(*ip_cache_);
-	cookie_cache_->BindForgeryUA(*ua_cache_);
-	cookie_cache_->SortCookies();
-
 	TASKINFO_MAP::iterator it = task_cache_->task_idle_map_.begin();
 	TASKINFO_MAP::iterator packet_start = it;
 	for (; it != task_cache_->task_idle_map_.end(), index < count; index++) {
 		base_logic::RobotTaskContent	con;
-		base_logic::ForgeryIP 			ip;
 		base_logic::LoginCookie 		cookie;
 		base_logic::RobotTask *info = (it++)->second;
 		if (!cookie_cache_->GetCookie(info->type(), cookie))
 			continue;
-//		if (!cookie_ip_manager_->GetIpByCookie(cookie, ip)) {
-//			LOG_MSG2("there are no ip for cookie: %s",
-//					cookie.get_cookie_body().c_str());
-//			continue;
-//		}
+
 		if (!content_cache_->GetContentByTaskType(info->type(), con)) {
 			LOG_MSG2("task(id: %d, type: %d) has no content, ignore it",
 					info->id(), info->type());
@@ -257,7 +172,6 @@ bool TaskSchdulerManager::DistributionTask() {
 		}
 
 		info->set_cookie(cookie);
-//		info->set_ip(ip);
 		info->set_content(con);
 
 		struct RobotTaskBase *unit = info->CreateTaskPacketUnit();
@@ -265,10 +179,6 @@ bool TaskSchdulerManager::DistributionTask() {
 		tasks.task_set.push_back(unit);
 		info->set_state(TASK_SEND);
 		info->set_send_time();
-//		task_cache_->task_exec_map_[info.id()] = info;
-//		LOG_DEBUG2("after insert, task_exec_map size = %d",
-//				task_cache_->task_exec_map_.size());
-//		task_cache_->task_idle_map_.erase(it++);
 		task_db_->UpdateRobotTaskDetail(info);
 		LOG_MSG2("DistributionTask task_type = %d, task_id=%d", info->type(), info->id());
 		if (tasks.task_set.size() % base_num == 0
@@ -337,7 +247,4 @@ uint32 TaskSchdulerManager::GetExecTasks() {
 	return task_cache_->task_exec_map_.size();
 }
 
-int64& TaskSchdulerManager::GetDatabaseUpdateTimeByPlatId(const int64 plat_id) {
-	return cookie_cache_->update_time_map_[plat_id];
-}
 }  // namespace crawler_task_logic

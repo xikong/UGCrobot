@@ -5,9 +5,8 @@
 #define KID_MANAGER_DB_H_
 
 #include <string>
-
-#include "logic/auto_crawler_infos.h"
 #include "storage/storage_controller_engine.h"
+#include "logic/auto_crawler_infos.h"
 #include "basic/basictypes.h"
 #include "logic/base_values.h"
 #include "basic/scoped_ptr.h"

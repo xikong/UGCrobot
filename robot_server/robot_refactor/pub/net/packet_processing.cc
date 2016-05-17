@@ -2211,6 +2211,36 @@ void PacketProsess::ClearRobotTaskList(struct PacketHead* packet_head) {
 			delete taoguba;
 			break;
 		}
+		case base_logic::RobotTask::WEIBO: {
+			struct WeiBoTask *weibo = (struct WeiBoTask*)base;
+			delete weibo;
+			break;
+		}
+		case base_logic::RobotTask::TIANYA: {
+			struct TianyaTask* tianya = (struct TianyaTask*)base;
+			delete tianya;
+			break;
+		}
+		case base_logic::RobotTask::QZONE: {
+			struct QzoneTask* qzone = (struct QzoneTask*)base;
+			delete qzone;
+			break;
+		}
+		case base_logic::RobotTask::MAOPU: {
+			struct MaopuTask* maopu = (struct MaopuTask*)base;
+			delete maopu;
+			break;
+		}
+		case base_logic::RobotTask::DOUBAN: {
+			struct Douban* douban = (struct Douban*)base;
+			delete douban;
+			break;
+		}
+		case base_logic::RobotTask::SNOWBALL: {
+			struct SnowBall* snowball = (struct SnowBall*)base;
+			delete snowball;
+			break;
+		}
 		}
 	}
 }

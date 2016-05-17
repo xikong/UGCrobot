@@ -24,6 +24,8 @@ class CrawlerTaskDB {
  public:
     bool UpdateCookie(int64 cookie_id, int is_valid);
 
+    bool UpdateCookieAccessTime(int64 cookie_id, time_t last_access_time);
+
     bool BindIPToCookie(int64 cookie_id, int64 ip_id, const std::string &ip);
 
     bool BindUAToCookie(int64 cookie_id, int64 ua_id);
@@ -44,7 +46,7 @@ class CrawlerTaskDB {
 
 	bool FectchBatchForgeryIP(std::list<base_logic::ForgeryIP>* list);
 
-    bool GetCookies(int count, uint64 last_time, std::list<base_logic::LoginCookie>* cookies_list);
+    bool GetCookies(int count, uint64 attr_id, uint64 usable_time, std::list<base_logic::LoginCookie>* cookies_list);
 
     bool FetchBatchTaskContent(int16 task_type, std::list<base_logic::RobotTaskContent> *list, bool is_new = true);
  public:

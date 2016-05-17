@@ -15,6 +15,7 @@
 #include "basic/radom_in.h"
 #include "crawler_task_logic.h"
 #include "task_schduler_engine.h"
+#include "cookie_engine.h"
 
 #define DEFAULT_CONFIG_PATH     "./plugins/robot_task/robot_task_config.xml"
 #define ROBOT_CONFIG_FILE		"./config"
@@ -137,8 +138,8 @@ bool CrawlerTasklogic::Init() {
 	robot_task_logic::TaskSchdulerManager* schduler_mgr =
 			robot_task_logic::TaskSchdulerEngine::GetTaskSchdulerManager();
 
-	schduler_mgr->Init(router_schduler_engine_, &config_);
 	schduler_mgr->InitDB(task_db_.get());
+	schduler_mgr->Init(router_schduler_engine_, &config_);
 
 	robot_task_logic::TaskSchdulerEngine* engine =
 			robot_task_logic::TaskSchdulerEngine::GetTaskSchdulerEngine();
@@ -289,7 +290,7 @@ bool CrawlerTasklogic::OnIniTimer(struct server *srv) {
 		srv->add_time_task(srv, "robot_task", TIME_UPDATE_EXEC_TASKS, 10, -1);
 
 		srv->add_time_task(srv, "robot_task", TIME_FETCH_IP, config_.fetch_ip_tick, -1);
-		srv->add_time_task(srv, "robot_task", TIME_FETCH_COOKIE, config_.fetch_cookie_tick, -1);
+		srv->add_time_task(srv, "robot_task", TIME_WRITE_COOKIE_USE_TIME, config_.fetch_cookie_tick, -1);
 		srv->add_time_task(srv, "robot_task", TIME_FETCH_CONTENT, config_.fetch_content_tick, -1);
 	}
 	return true;
@@ -367,11 +368,14 @@ bool CrawlerTasklogic::OnRobotTaskStatus(struct server* srv, int socket,
 	struct RobotTaskStatus *status = (struct RobotTaskStatus *) packet;
 	TaskSchdulerManager *task_manager =
 			TaskSchdulerEngine::GetTaskSchdulerManager();
+
 	LOG_DEBUG2("receive robot task status: task_type = %d, task_id = %d, status = %d",
 			status->task_type, status->task_id, status->is_success);
-	if (TASK_FAIL == status->is_success) {
+	if (TASK_FAIL == status->is_success
+			&& base_logic::RobotTask::TIEBA == status->task_type) {
 		task_db_->UpdateCookie(status->cookie_id, 0);
-		task_manager->RemoveInvalidCookie(status->cookie_id);
+		CookieEngine::GetCookieManager()->RemoveInvalidCookie(
+				status->cookie_id);
 		LOG_MSG2("task[%d] exec error, error code: %s",
 				status->task_id, status->error_no.c_str());
 	}
