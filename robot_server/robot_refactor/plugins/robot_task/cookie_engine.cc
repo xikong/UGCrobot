@@ -138,8 +138,9 @@ bool CookieManager::FecthCookies(int64 attr_id) {
 	CookieIdMap &cookie_id_map = cookies_cache_.cookie_id_map_;
 	CookieListConstIt it = cookie_list.begin();
 	for (; it != cookie_list.end(); ++it) {
-		cookie_id_map[it->get_cookie_attr_id()] = *it;
+		cookie_id_map[it->cookie_id()] = *it;
 	}
+	LOG_DEBUG2("cookid_id_map size: %d", cookie_id_map.size());
 	return true;
 }
 
