@@ -114,7 +114,7 @@ bool RobotLogic::InitConfig(){
         delete[] parg;
     }
     catch(std::string &ex){
-        fclose(fp);
+    	fclose(fp);
         LOG_MSG2("catch= %s", ex.c_str());
     }
 
@@ -148,16 +148,12 @@ bool RobotLogic::OnRobotMessage(struct server *srv, const int socket,
         LoginRouterResult(socket, msg, len);
         break;
     }
-    case S2C_ALLOCATING_WEIBO_MULTI_TASK:
-    case S2C_ALLOCATING_TIANYA_MULTI_TASK:
-    case S2C_ALLOCATING_TIEBA_MULTI_TASK:
-    case S2C_ALLOCATING_QQZONE_MULTI_TASK:
     case S2C_ALLOCATING_MULTI_ROBOT_TASK:{
         robot_mgr->MultiRobotTask(msg, len);
         break;
     }
     default:
-        break;
+    	break;
     }
 
     return true;
@@ -410,7 +406,7 @@ bool RobotLogic::HeartBeatCheck(){
         return false;
     }
 
-    LOG_MSG2("Send Router HeartBeat Check Msg Success, connSocket = %d, RouterIp = %s, RouterPort = %d \n",
+    LOG_MSG2("HeartBeat Check, connSocket = %d, RouterIp = %s, RouterPort = %d",
             router_agent_.conn_socket_,
             router_agent_.host_.c_str(),
             router_agent_.port_);
@@ -464,7 +460,7 @@ bool RobotLogic::ReportRobotState(){
         return false;
     }
 
-    LOG_MSG2("Send Router State Msg max_task_num = %d, curr_task_num = %d \n",
+    LOG_MSG2("Send Router State Msg max_task_num = %d, curr_task_num = %d",
             report_state_msg.max_task_num, report_state_msg.curr_task_num);
 
     return true;

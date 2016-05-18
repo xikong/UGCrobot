@@ -31,6 +31,7 @@ class RobotEngine {
     RobotEngine();
     bool Init();
     bool WriteLogFile(struct TaskHead *task, const string &response);
+
  public:
     virtual ~RobotEngine();
 

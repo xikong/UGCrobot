@@ -78,8 +78,8 @@ bool SendUtils::SendMessage(int socket, struct PacketHead *packet,
 
     packet->packet_length_ = packet_stream_length;
 
-    LOG_MSG2("Send Msg Success, Opcode = %d, Length = %d", packet->operate_code_,
-            packet->packet_length_);
+//    LOG_DEBUG2("Send Msg Success, Opcode = %d, Length = %d", packet->operate_code_,
+//            packet->packet_length_);
 
     ret = SendFull(socket, reinterpret_cast<char*>(packet_stream),
             packet_stream_length);
@@ -170,15 +170,15 @@ int SomeUtils::GetPortBySocket(const int socket, int16 &port){
 
 std::string SomeUtils::GetLocalTime(const time_t current_time){
 
-    char tmp[64];
-    strftime( tmp, sizeof(tmp), "%Y/%m/%d %H:%M:%S", localtime(&current_time) );
+	char tmp[64];
+	strftime( tmp, sizeof(tmp), "%Y/%m/%d %H:%M:%S", localtime(&current_time) );
 
     std::string time(tmp);
 
     return time;
 }
 
-long SomeUtils::GetCurrentTime(){
+long SomeUtils::GetCurrentTimeMs(){
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return tv.tv_sec * 1000 + tv.tv_usec / 1000;

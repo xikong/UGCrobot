@@ -7,15 +7,15 @@
 
 #include "task_engine.h"
 
+#include <stdlib.h>
+
+#include "task/task_fixed_param.h"
+
 using std::string;
 
 namespace base_logic {
 
 bool TaskEngine::StartTaskWork(struct TaskHead *task, string &str_response){
-
-    if(NULL == task){
-        return false;
-    }
 
     bool r = false;
 
@@ -42,10 +42,11 @@ bool TaskEngine::StartTaskWork(struct TaskHead *task, string &str_response){
     }
 
     //判断执行结果
-    r = this->JudgeResultByResponse(str_response);
+    r = this->JudgeResultByResponse(str_response, task->error_no_);
     if(!r){
-        LOG_MSG2("task_type = %d, task_id = %d, JudgeResultByResponse Failed",
-                task->task_type_, task->task_id_);
+        LOG_MSG2("task_type = %d, task_id = %d, response = %s, JudgeResultByResponse Failed",
+                task->task_type_, task->task_id_, str_response.c_str());
+        task->is_success_ = TASK_FAIL;
         return false;
     }
 
@@ -66,6 +67,11 @@ bool TaskEngine::SendHttpRequestCurl(struct TaskHead *task, string &url,
             task->forge_ua_ = "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0";
         }
 
+        //伪造默认ip
+        if(task->forge_ip_.empty()){
+        	task->forge_ip_ = "61.135.217.9";
+        }
+
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 0);
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0); //设定为不验证证书和host
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1);
@@ -73,8 +79,8 @@ bool TaskEngine::SendHttpRequestCurl(struct TaskHead *task, string &url,
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1); //跳转  301  302
         curl_easy_setopt(curl, CURLOPT_HEADER, 0);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, task->forge_ua_.c_str());
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 5); // 接收超时时间
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15); // 接收超时时间
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
         curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
 
@@ -84,10 +90,14 @@ bool TaskEngine::SendHttpRequestCurl(struct TaskHead *task, string &url,
             LOG_MSG2("post_data = %s", str_postarg.c_str());
         }
 
-        headers = curl_slist_append(headers, "Cache-Control: max-age=0");
-        headers = curl_slist_append(headers, "Accept-Charset: uft-8");
-        headers = curl_slist_append(headers, "Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3");
-        headers = curl_slist_append(headers, "Connection: keep-alive");
+        //固定头
+        HandlerRequestHeader(headers);
+
+        //Content-Length
+        std::stringstream os;
+        os << "Content-Length: ";
+        os << str_postarg.size();
+        headers = curl_slist_append(headers, os.str().c_str());
 
         //cookie
         task->cookie_ = "Cookie: " + task->cookie_;
@@ -99,8 +109,8 @@ bool TaskEngine::SendHttpRequestCurl(struct TaskHead *task, string &url,
 
         //伪造ip
         if(!task->forge_ip_.empty()){
-            LOG_MSG2("fore_ip = %s", task->forge_ip_.c_str());
-            task->forge_ip_ = "REMOTE_ADDR: " + task->forge_ip_ + ", X-Forwarded-For: " + task->forge_ip_;
+        	LOG_DEBUG2("forger_ip = %s", task->forge_ip_.c_str());
+            task->forge_ip_ = "X-Forwarded-For: " + task->forge_ip_;
             headers = curl_slist_append(headers, task->forge_ip_.c_str());
         }
 
@@ -112,19 +122,42 @@ bool TaskEngine::SendHttpRequestCurl(struct TaskHead *task, string &url,
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&(str_response));
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, TaskEngine::ReadResponse);
 
-        //如果超时，再提交一次
+        base_logic::WLockGd lk(lock_);
+
+        //如果超时
+        int i = 0;
         res = curl_easy_perform(curl);
-        if(CURLcode::CURLE_OPERATION_TIMEDOUT == res){
-            res = curl_easy_perform(curl);
+        while(res == CURLcode::CURLE_OPERATION_TIMEDOUT && i < 3){
+        	res = curl_easy_perform(curl);
+        	++i;
         }
 
-        LOG_MSG2("url = %s, res = %d, error = %s", url.c_str(), res, curl_easy_strerror(res));
+        if(res != 0){
+        	string curl_fail_msg = curl_easy_strerror(res);
+        	task->is_success_ = TASK_FAIL;
+			task->error_no_ = curl_fail_msg;
+			str_response = curl_fail_msg;
+			LOG_MSG2("url = %s, res = %d, error = %s", url.c_str(), res, curl_fail_msg.c_str());
+        }
+
         curl_easy_cleanup(curl);
 
         return true;
     }
 
     return false;
+}
+
+void TaskEngine::HandlerRequestHeader(struct curl_slist* headers){
+
+	headers = curl_slist_append(headers, "Accept: */*");
+	headers = curl_slist_append(headers, "Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3");
+	headers = curl_slist_append(headers, "Accept-Encoding: gzip, deflate");
+	headers = curl_slist_append(headers, "Connection: keep-alive");
+	headers = curl_slist_append(headers, "X-Requested-With: XMLHttpRequest");
+	headers = curl_slist_append(headers, "Content-Type: application/x-www-form-urlencoded; charset=UTF-8");
+
+	this->AssembleRequestHeader(headers);
 }
 
 size_t TaskEngine::ReadResponse(void* buffer, size_t size, size_t member, void* res) {
@@ -238,9 +271,8 @@ bool TaskQQEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     str_postarg = os.str();
 }
 
-bool TaskQQEngine::JudgeResultByResponse(string &response){
+bool TaskQQEngine::JudgeResultByResponse(string &response, string &code_num){
 
-    string code_num;
     FindStrFromString(code_num, response, "\"code\":", ',');
     if(code_num != "0"){
         return false;
@@ -337,9 +369,8 @@ bool TaskTianYaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     return true;
 }
 
-bool TaskTianYaEngine::JudgeResultByResponse(string &response){
+bool TaskTianYaEngine::JudgeResultByResponse(string &response, string &code_num){
 
-    string code_num;
     FindStrFromString(code_num, response, "{\"success\":\"", '"');
     if(code_num == "1"){
         return true;
@@ -352,13 +383,13 @@ TaskTieBaEngine *TaskTieBaEngine::instance_ = NULL;
 bool TaskTieBaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
             string &str_postarg, string &str_referer){
 
+
     bool r = false;
     struct TaskTieBaPacket *tieba_task = (struct TaskTieBaPacket*)task;
     if(NULL == tieba_task){
         return false;
     }
 
-    //http://tieba.baidu.com/p/4492624045
     //获得tid
     string str_tid;
     r = FindStrFromString(str_tid, tieba_task->pre_url_, "com/p/", '\0');
@@ -368,52 +399,54 @@ bool TaskTieBaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     }
 
     //获取tbs
-    string str_tbs;
-    r = FindStrFromString(str_tbs, tieba_task->cookie_, "", ';');
+    r = FindStrFromString(tieba_task->tbs_, tieba_task->cookie_, "tbs=", ';');
     if(!r){
-        LOG_MSG2("FindStrFromString TieBa tbs = %s failed", str_tbs.c_str());
+        LOG_MSG2("FindStrFromString TieBa task_cookie = %s, tbs = %s failed",
+        		 tieba_task->cookie_.c_str(), tieba_task->tbs_.c_str());
         return false;
     }
+
+    //获取user_id
+    r = FindStrFromString(tieba_task->user_id_, tieba_task->cookie_, "user_id=", ';');
+    if(!r){
+    	LOG_MSG2("FindStrFromString TieBa task_cookie = %s, user_id = %s failed",
+				 tieba_task->cookie_.c_str(), task->user_id_.c_str());
+    	return false;
+    }
+
+    //关注本吧
+	TryAttentionKw(tieba_task);
+
+	//尝试签到
+	TrySignInKw(tieba_task);
 
     //组装post语句
     std::stringstream os;
 
     if(tieba_task->repost_id_.empty()){
         //固定参数
-        os << "ie=utf-8&vcode_md5=&rich_text=1&files=%5B%5D&mouse_pwd=&mouse_pwd_isclick=0&__type__=reply";
-        os << "&mouse_pwd_t=" << logic::SomeUtils::GetCurrentTime();
+        os << TIEBA_FIXED_PARAM_REPLY;
+        os << "&mouse_pwd_t=" << logic::SomeUtils::GetCurrentTimeMs();
     }else{
-        //固定参数
-        os << "ie=utf-8&rich_text=1&lp_type=0&lp_sub_type=0&new_vcode=1&tag=11&anonymous=0";
+        //楼中楼回复固定参数
+        os << TIEBA_FIXED_PARAM_REPLY_FLOOR;
         os << "&quote_id=" << tieba_task->repost_id_;
         os << "&repostid=" << tieba_task->repost_id_;
     }
 
-    // 默认回2楼
-    if( tieba_task->floor_num_ < 0){
-        tieba_task->floor_num_ = 1;
-    }
-
-    tieba_task->floor_num_ += 1;
+    tieba_task->floor_num_ = 1;
     os << "&kw=" << tieba_task->kw_;
     os << "&fid=" << tieba_task->fid_;
     os << "&tid=" << str_tid;
     os << "&floor_num=" << tieba_task->floor_num_;
-    os << "&" << str_tbs;
+    os << "&tbs=" << tieba_task->tbs_;
     os << "&content=" << tieba_task->content_;
-
-    LOG_MSG2("referer = %s", tieba_task->pre_url_.c_str());
-    LOG_MSG2("cookie = %s", tieba_task->cookie_.c_str());
-    LOG_MSG2("kw = %s", tieba_task->kw_.c_str());
-    LOG_MSG2("fid = %s", tieba_task->fid_.c_str());
-    LOG_MSG2("tid = %s", str_tid.c_str());
-    LOG_MSG2("%s", str_tbs.c_str());
 
     //post参数
     str_postarg = os.str();
 
     //固定提交url
-    str_url = "http://tieba.baidu.com/f/commit/post/add";
+    str_url = TIEBA_FIXED_URL_COMMIT_POST_ADD;
 
     //原帖地址
     str_referer = tieba_task->pre_url_;
@@ -421,18 +454,72 @@ bool TaskTieBaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     return true;
 }
 
-bool TaskTieBaEngine::JudgeResultByResponse(string &response){
+void TaskTieBaEngine::AssembleRequestHeader(struct curl_slist* headers){
 
-    string code_num;
+	//贴吧固定 请求头
+	headers = curl_slist_append(headers, "Host: tieba.baidu.com");
+
+}
+
+bool TaskTieBaEngine::JudgeResultByResponse(string &response, string &code_num){
+
     FindStrFromString(code_num, response, "{\"no\":", ',');
     if(code_num == "0"){
-        FindStrFromString(code_num, response, "err_code\":", ',');
-        if(code_num == "0"){
-            return true;
-        }
+        return true;
     }
 
     return false;
+}
+
+bool TaskTieBaEngine::TryAttentionKw(struct TaskTieBaPacket *task_tb){
+
+	bool r = false;
+
+	//根据cookie获取uid
+	string str_uid;
+	r = FindStrFromString(str_uid, task_tb->cookie_, "BAIDUID=", ':');
+	if(!r){
+		LOG_MSG2("Parse User uid failed, cookie = %s", task_tb->cookie_.c_str());
+		return false;
+	}
+
+	std::stringstream os;
+	os << "fid=" << task_tb->fid_;
+	os << "&fname=" << task_tb->kw_;
+	os << "&uid=" << str_uid;
+	os << "&ie=gbk";
+	os << "&tbs=" << task_tb->tbs_;
+
+	string str_post = os.str();
+
+	string str_referer = "http://tieba.baidu.com/f?kw=" + task_tb->kw_;
+
+	string str_url = TIEBA_FIXED_URL_LIKE_KW;
+
+	string str_response;
+	SendHttpRequestCurl(task_tb, str_url, str_post, str_referer, str_response);
+
+	return true;
+}
+
+bool TaskTieBaEngine::TrySignInKw(struct TaskTieBaPacket *task_tb){
+
+	bool r = false;
+
+	std::stringstream os;
+	os << "ie=utf-8&kw=" << task_tb->kw_;
+	os << "&tbs=" << task_tb->tbs_;
+
+	string str_post = os.str();
+
+	string str_referer = task_tb->pre_url_;
+
+	string str_url = TIEBA_FIXED_URL_SIGN_KW;
+
+	string str_response;
+	SendHttpRequestCurl(task_tb, str_url, str_post, str_referer, str_response);
+
+	return true;
 }
 
 TaskWeiBoEngine *TaskWeiBoEngine::instance_ = NULL;
@@ -469,15 +556,14 @@ bool TaskWeiBoEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     //清空流，构造提交url
     os.str("");
     os << "http://weibo.com/aj/v6/comment/add?ajwvr=" << wvr_num << "&__rnd=";
-    os << logic::SomeUtils::GetCurrentTime();
+    os << logic::SomeUtils::GetCurrentTimeMs();
     str_url = os.str();
 
     return true;
 }
 
-bool TaskWeiBoEngine::JudgeResultByResponse(string &response){
+bool TaskWeiBoEngine::JudgeResultByResponse(string &response, string &code_num){
 
-    string code_num;
     FindStrFromString(code_num, response, "{\"code\":\"", '"');
     if(code_num == "10000"){
         return true;
@@ -510,7 +596,7 @@ bool TaskMopEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     os << "&catalogId=" << task_mop->catalogId_;
     os << "&fmtoken=" << task_mop->fmtoken_;
     os << "&currformid=" << task_mop->currformid_;
-    os << "&date=" << logic::SomeUtils::GetCurrentTime();
+    os << "&date=" << logic::SomeUtils::GetCurrentTimeMs();
     os << "&niming=0";
 
     str_postarg = os.str();
@@ -520,9 +606,8 @@ bool TaskMopEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     return true;
 }
 
-bool TaskMopEngine::JudgeResultByResponse(string &response){
+bool TaskMopEngine::JudgeResultByResponse(string &response, string &code_num){
 
-    string code_num;
     FindStrFromString(code_num, response, "isSuccess\":", ',');
     if(code_num != "true"){
         return false;
@@ -564,7 +649,7 @@ bool TaskDouBanEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
     return true;
 }
 
-bool TaskDouBanEngine::JudgeResultByResponse(string &response){
+bool TaskDouBanEngine::JudgeResultByResponse(string &response, string &code_num){
 
     if(response.find("页面不存在") == string::npos){
         return false;
@@ -577,42 +662,246 @@ TaskTaoGuBaEngine *TaskTaoGuBaEngine::instance_ = NULL;
 bool TaskTaoGuBaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
             string &str_postarg, string &str_referer){
 
-    struct TaskTaoGuBaPacket *task_taoguba = (struct TaskTaoGuBaPacket *)task;
-    if(NULL == task_taoguba){
+	struct TaskTaoGuBaPacket *task_taoguba = (struct TaskTaoGuBaPacket *)task;
+	if(NULL == task_taoguba){
+		return false;
+	}
+
+	std::stringstream os;
+
+	//固定参数
+	os << TAOGUBA_FIXED_PARAM;
+
+	os << "&subject=" << task_taoguba->subject_;
+	os << "&topicID=" << task_taoguba->topicID_;
+	os << "&body=" << task_taoguba->content_;
+
+	str_postarg = os.str();
+
+	str_referer = "http://www.taoguba.com.cn/Article/" + task_taoguba->topicID_ + "/1";
+	task_taoguba->pre_url_ = str_referer;
+
+	str_url = TAOGUBA_FIXED_POST_REPLY_URL;
+
+	return true;
+}
+
+void TaskTaoGuBaEngine::AssembleRequestHeader(struct curl_slist* headers){
+
+	headers = curl_slist_append(headers, "Host: www.taoguba.com.cn");
+}
+
+bool TaskTaoGuBaEngine::JudgeResultByResponse(string &response, string &code_num){
+
+	if( string::npos != response.find("今天发布数量已超过上限，请明天再发，谢谢")){
+		response = "今天发布数量已超过上限，请明天再发，谢谢";
+		code_num = response;
+		return false;
+	}
+
+	if( string::npos != response.find("抱歉，您涉嫌恶意行为，暂限制此操作！") ){
+		response = "抱歉，您涉嫌恶意行为，暂限制此操作！";
+		code_num = response;
+		return false;
+	}
+
+	if( string::npos != response.find("错误页面_淘股吧")  ){
+		response = "错误页面_淘股吧";
+		code_num = response;
+		return false;
+	}
+
+	if( string::npos != response.find("该笔名被永封过,无法登录") ){
+		response = "该笔名被永封过,无法登录";
+		code_num = response;
+		return false;
+	}
+
+	code_num = "回复成功";
+
+	return true;
+}
+
+TaskXueQiuEngine *TaskXueQiuEngine::instance_ = NULL;
+bool TaskXueQiuEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
+			string &str_postarg, string &str_referer){
+
+	struct TaskXueQiuPacket *task_xueqiu = (struct TaskXueQiuPacket *)task;
+	if(NULL == task_xueqiu){
+		return false;
+	}
+
+	if(task_xueqiu->pre_url_.empty()){
+		LOG_MSG("task_xueqiu pre_url empty");
+		return false;
+	}
+
+	bool r = false;
+	string str_session_token;
+	r = GetSessionToken(task_xueqiu, str_session_token);
+	if(!r){
+		return false;
+	}
+
+	std::stringstream os;
+	if(task_xueqiu->topic_id_.empty()){
+
+		string str_topic_id;
+		r = GetCurrReplyId(task_xueqiu->pre_url_, str_topic_id);
+		if(!r){
+			return false;
+		}
+
+		//组装post参数
+		os << "id=" << str_topic_id;
+		os << "&comment=" << task_xueqiu->content_;
+		os << "&forward=&session_token=" << str_session_token;
+
+		str_url = XUEQIU_FIXED_POST_REPLY_URL;
+
+	}else{
+
+		os << "url=%2Fstatuses%2Freply.json";
+		os << "&data%5Bid%5D=" << task_xueqiu->topic_id_;
+		os << "&data%5Bcomment%5D=" << task_xueqiu->content_;
+		os << "&data%5B_%5D=" << logic::SomeUtils::GetCurrentTimeMs();
+		os << "&data%5Bforward%5D=0";
+		os << "&session_token=" << str_session_token;
+
+		str_url = XUEQIU_FIXED_POST_REPLY_URSER_URL;
+	}
+
+	str_postarg = os.str();
+
+	str_referer = task_xueqiu->pre_url_;
+
+	return true;
+}
+
+void TaskXueQiuEngine::AssembleRequestHeader(struct curl_slist* headers){
+	headers = curl_slist_append(headers, "Host: xueqiu.com");
+}
+
+bool TaskXueQiuEngine::JudgeResultByResponse(string &response, string &code_num){
+
+	bool r = false;
+	r = FindStrFromString(code_num, response, "error_description\":\"", '"');
+	if(r){
+		return false;
+	}
+
+	code_num = "回复成功";
+	response = code_num;
+
+	return true;
+}
+
+bool TaskXueQiuEngine::GetSessionToken(struct TaskXueQiuPacket *task, string &str_session_token){
+
+	bool r = false;
+
+	//发送Get请求获取 session_token
+	string post_arg = "";
+	string str_response;
+	string str_get_sesson_token_url = XUEQIU_FIXED_GET_SESSION_TOKEN_URL;
+	r = SendHttpRequestCurl(task, str_get_sesson_token_url, post_arg,
+			task->pre_url_, str_response);
+	if(!r){
+		LOG_MSG("GetXueQiuSessionToken Failed");
+		return false;
+	}
+
+	//获取session_token
+	r = FindStrFromString(str_session_token, str_response, "token\":\"", '"');
+	if(!r){
+		LOG_MSG2("ParseXueQiuSessionToken Failed, response = %s", str_response.c_str());
+		return false;
+	}
+
+	return true;
+}
+
+bool TaskXueQiuEngine::GetCurrReplyId(const string &url, string &topic_id){
+
+	bool r = false;
+	if(url.empty()){
+		LOG_MSG("ParseXueQiuReplyId Failed, Url Empty");
+		return false;
+	}
+
+	std::stringstream os;
+	int url_size = url.size();
+	for(int32 i = url_size - 1; i >= 0; --i){
+		if(url[i] == '/'){
+			break;
+		}
+		os << url[i];
+	}
+
+	string reverse_id = os.str();
+	os.str("");
+	for(int32 i = reverse_id.size() - 1; i >= 0 ; --i){
+		os << reverse_id[i];
+	}
+
+	topic_id = os.str();
+
+	return true;
+}
+
+TaskIGuBaEngine *TaskIGuBaEngine::instance_ = NULL;
+
+bool TaskIGuBaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
+		string &str_postarg, string &str_referer){
+
+    struct TaskIGuBaPacket *task_iguba = (struct TaskIGuBaPacket *)task;
+    if(NULL == task_iguba){
         return false;
     }
 
+    bool r = false;
+
+    //获取topic_id
+    string str_topic_id;
+    r = FindStrFromString(str_topic_id, task_iguba->pre_url_, ",", '.');
+    if(!r){
+        LOG_MSG2("Parse TopicId Failed, pre_url_ = %s", task_iguba->pre_url_.c_str());
+        return false;
+    }
+
+    long current_time = logic::SomeUtils::GetCurrentTimeMs();
+
     std::stringstream os;
+    os << "http://iguba.eastmoney.com/interf/reply.aspx?callback=jQuery183039066723543111336_";
+    os << current_time;
+    os << "&action=reply&id=" << str_topic_id;
+    os << "&huifuid=";
+    os << "&text=" << task_iguba->content_;
+    os << "&yzm=&yzm_id=&t_type=1&_=";
+    os << current_time;
 
-    //固定参数
-    os << "firstFlag=Y&quoteContent=&quoteUserID=&quoteUserName=&stockName1=&recommondStokLsit=&stockName2=&recommondStokLsit=&stockName3=&recommondStokLsit=";
+    str_url = os.str();
 
-    os << "&subject=" << task_taoguba->subject_;
-    os << "&topicID=" << task_taoguba->topicID_;
-    os << "&body=" << task_taoguba->content_;
-    str_postarg = os.str();
+    str_referer = task_iguba->pre_url_;
 
-    str_referer = "http://www.taoguba.com.cn/Article/" + task_taoguba->topicID_ + "/1";
-    task_taoguba->pre_url_ = str_referer;
-
-    str_url = "http://www.taoguba.com.cn/addReply";
+    str_postarg = "";
 
     return true;
 }
 
-bool TaskTaoGuBaEngine::JudgeResultByResponse(string &response){
+void TaskIGuBaEngine::AssembleRequestHeader(struct curl_slist *headers){ 
+	headers = curl_slist_append(headers, "Host: iguba.eastmoney.com");
+}
 
-    if( response.find("今天发布数量已超过上限，请明天再发，谢谢") ){
-        response = "今天发布数量已超过上限，请明天再发，谢谢";
-        return false;
+bool TaskIGuBaEngine::JudgeResultByResponse(string &response, string &code_num){
+
+    bool r = false;
+    r = FindStrFromString(code_num, response, "me\":\"", '""');
+    if(r && code_num == "评论成功"){
+        return true;
     }
 
-    if( response.find("错误页面_淘股吧") == string::npos ){
-        response = "错误页面_淘股吧";
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 } /* namespace base_logic */
