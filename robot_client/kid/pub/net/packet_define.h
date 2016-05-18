@@ -14,6 +14,7 @@
 #include "net/comm_head.h"
 #include "net/packet_processing.h"
 #include "logic/logic_comm.h"
+#include "net/comm_head.h"
 
 #define PASSWORD_SIZE   8 + 1
 #define MAC_SIZE        16 + 1
@@ -129,10 +130,10 @@ struct RobotStatePacket : public PacketHead{
 struct TaskHead{
 
     TaskHead()
-        : is_start_(0)
-        , is_finsh_(0)
-        , feed_server_id_(0)
-        , retry_times_(0){
+    	: error_no_("未知错误")
+		, feed_server_id_(0)
+    	, is_success_(9)
+    	, user_id_("") {
     }
 
     virtual ~TaskHead(){
@@ -143,17 +144,17 @@ struct TaskHead{
     virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp) = 0;
 
     int32       feed_server_id_;
+    string		error_no_;
     int64       task_id_;
     uint16      task_type_;
-    int8        is_start_;
-    int8        is_finsh_;
-    int8        retry_times_;
     int64       cookie_id_;
+    string		user_id_;
     string      cookie_;
     string      content_;
     string      forge_ip_;
     string      forge_ua_;
     string      pre_url_;
+    int8		is_success_;
 };
 
 //微博任务
@@ -212,10 +213,23 @@ struct TaskDouBanPacket : public TaskHead{
 //淘股吧
 struct TaskTaoGuBaPacket : public TaskHead{
 
-    string      topicID_;
-    string      subject_;
+	string 		topicID_;
+	string 		subject_;
 
-    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
+	virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
+};
+
+//雪球任务
+struct TaskXueQiuPacket : public TaskHead{
+	string 		topic_id_;
+
+	virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
+};
+
+//东方股吧
+struct TaskIGuBaPacket : public TaskHead{
+
+	virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
 };
 
 //收到服务器分配的任务
@@ -226,10 +240,11 @@ struct MultiTaskList : public PacketHead{
     bool UnpackStream(const void *packet_stream, int32 len);
 };
 
-#define FEEDBACK_TASK_STATUS_SIZE   (PACKET_HEAD_LENGTH + sizeof(int8) + sizeof(int64) * 2)
+#define FEEDBACK_TASK_STATUS_SIZE   (PACKET_HEAD_LENGTH + sizeof(int16) + sizeof(int8) + sizeof(int64) * 2)
 struct FeedBackTaskStatus : public PacketHead{
     int16       task_type;
     int8        is_success;
+    string 		error_code;
     int64       task_id;
     int64       cookie_id;
 

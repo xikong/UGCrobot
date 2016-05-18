@@ -85,7 +85,7 @@ bool RobotEngine::PopNewTaskFromQueue(struct TaskHead **task){
         return false;
     }
 
-    LOG_MSG2("Pop New Task From Queue, task_id = %u, task_type = %d, curr_task_num = %d",
+    LOG_DEBUG2("Pop New Task From Queue, task_id = %u, task_type = %d, curr_task_num = %d",
             (*task)->task_id_, (*task)->task_type_, g_ready_task_queue_.size());
 
     return true;
@@ -187,11 +187,11 @@ void RobotEngine::StartTaskWork(){
     string str_response;
     r = engine->StartTaskWork(task, str_response);
 
-    //任务结果写人日志文件
-    WriteLogFile(task, str_response);
-
     //向服务器反馈任务的状态
     FeedBackTaskStatus(task, r);
+
+    //任务结果写人日志文件
+    WriteLogFile(task, str_response);
 
     LOG_MSG("TaskWork Job finsh");
 
@@ -204,11 +204,9 @@ bool RobotEngine::FeedBackTaskStatus(struct TaskHead *task, bool is_success){
 
     struct FeedBackTaskStatus feedback_status_msg;
     MAKE_HEAD(feedback_status_msg, C2S_FEEDBACK_TASK_STATUS, 0, 0, 0, 0);
-    feedback_status_msg.is_success = TASK_SUCCESS;
-    if(!is_success){
-        feedback_status_msg.is_success = TASK_FAIL;
-    }
+    feedback_status_msg.is_success = task->is_success_;
 
+    feedback_status_msg.error_code = task->error_no_;
     feedback_status_msg.server_id_ = task->feed_server_id_;
     feedback_status_msg.crawler_id_ = RobotLogic::GetInstance()->GetRobotId();
     feedback_status_msg.crawler_type_ = robot_type;
@@ -222,12 +220,13 @@ bool RobotEngine::FeedBackTaskStatus(struct TaskHead *task, bool is_success){
         return false;
     }
 
-    LOG_MSG2("Send FeedBackTaskStatus Msg Success, feedback_server_id = %d,"
-                    " task_id = %d, task_type = %d, is_success = %d \n",
+    LOG_DEBUG2("Feedback ServerId = %d, task_id = %d, task_type = %d, cookie_id = %d, is_success = %d, error_msg = %s\n",
                     task->feed_server_id_,
                     task->task_id_,
                     task->task_type_,
-                    feedback_status_msg.is_success);
+					task->cookie_id_,
+                    feedback_status_msg.is_success,
+					feedback_status_msg.error_code.c_str());
 
     return true;
 }
@@ -239,11 +238,14 @@ bool RobotEngine::WriteLogFile(struct TaskHead *task, const string &response){
 
     //组合日志
     std::stringstream os;
-    os << logic::SomeUtils::GetLocalTime(time(NULL)) << ", ";
+    os << logic::SomeUtils::GetLocalTime(time(NULL)) << "\n";
     os << "task_id = " << task->task_id_ << ", ";
-    os << "task_type = " << task->task_type_ << ", \n";
-    os << "task_referer = " << task->pre_url_ << ", \n";
-    os << "task_content = " << task->content_ << ", \n";
+    os << "task_type = " << task->task_type_ << ", ";
+    os << "cookie_id = " << task->cookie_id_ << ", ";
+    os << "user_id = " << task->user_id_ << ", ";
+    os << "is_success = " << (int)task->is_success_ << ",\n";
+    os << "task_referer = " << task->pre_url_ << ",\n";
+    os << "task_content = " << task->content_ << ",\n";
     os << "response = " << response << "\n\n";
 
     //将任务信息写到日志中
@@ -254,19 +256,30 @@ bool RobotEngine::WriteLogFile(struct TaskHead *task, const string &response){
     }
 
     fflush(fp_task_log_);
+
+    LOG_DEBUG2("task_detail = %s", str_log.c_str());
+
+    return true;
 }
 
 void RobotEngine::Test(){
 
-    struct TaskTaoGuBaPacket *task = new struct TaskTaoGuBaPacket;
+//淘股吧
+#if 0
+	struct TaskTaoGuBaPacket *task = new struct TaskTaoGuBaPacket;
 
-    task->task_id_ = 1;
-    task->task_type_ = TASK_TAOGUBA;
+	task->task_id_ = 1;
+	task->task_type_ = TASK_TAOGUBA;
 
-    task->content_ = "不错";
-    task->topicID_ = "1473659";
-    task->subject_ = "商人的几个类型与商业的几个模式";
-    task->cookie_ = "JSESSIONID=2F2D6FC9062DAEA5D0B46ACA6D539E04-n1; CNZZDATA1574657=cnzz_eid%3D1151724852-1462413656-http%253A%252F%252Fwww.baidu.com%252F%26ntime%3D1462413656; tgbuser=1693199; tgbpwd=401069A9724aud51rvfq2rzrxh; bdshare_firstime=1462417196359";
+	task->forge_ip_ = "182.90.4.74:80";
+	task->forge_ua_ = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.1.7) Gecko/20071013 Firefox/2.0.0.7 Flock/0.9.1.3";
+	task->content_ = "最佳大数据股票投资平台 网罗一切数据 通过强大的算法和高效稳定的框架，以最快的速度完成技术指标分析 baidu。哈哈nu 杠 w1x";
+	task->topicID_ = "1480253";
+	task->subject_ = "怕个卵啊！上！";
+	task->cookie_ = "JSESSIONID=911A19A2CB703E6254067DDBA772D303-n1; tgbpwd=834B80EA03Dcsmk3wbwjv7vkgv; tgbuser=1706049; ";
+	PushNewTaskInQueue(task);
+
+#endif
 
 //贴吧
 #if 0
@@ -275,15 +288,48 @@ void RobotEngine::Test(){
     task->task_id_ = 1;
     task->task_type_ = TASK_TIEBA;
 
-    task->pre_url_ = "http://tieba.baidu.com/p/4521147288";
-    task->kw_ = "htcx9";
-    task->fid_ = "21618411";
-    task->content_ = "不错";
+    task->pre_url_ = "http://tieba.baidu.com/p/4542573958";
+    task->kw_ = "美的";
+    task->fid_ = "125819";
+    task->content_ = "[img+pic_type=0+width=560+height=285]http://imgsrc.baidu.com/forum/pic/item/94e02e08c93d70cf2916ecefffdcd100b8a12b47.jpg[/img]";
+    task->cookie_ = "tbs=8b7680f2a7f5ff061463052789;user_id=2219290345;BAIDUID=690F68B321216CAD38673E191C509FE9:FG=1; BDUSS=mZSbkl4OX40ZnJjZW05Y35hUGtYU3JXMXp-RDVrUHh1fllDN3o3MEx2ejE5bHRYQVFBQUFBJCQAAAAAAAAAAAEAAADprkeEt7LKwrK7xNy088WjuckAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPVpNFf1aTRXd; BIDUPSID=690F68B321216CAD38673E191C509FE9; H_PS_PSSID=18880_1431_18280_17946_19570_19805_19558_19808_19843_19901_19861_17001_15065_12252; PSTM=1463052788; HISTORY=69cd43e090d340bc11cc8484e636a104351e49; HOSUPPORT=1; PTOKEN=36e496c2bff0ad7ba87bacee8ac064ce; SAVEUSERID=bd218e320d66a6b5c3de64edb6df5a; STOKEN=a710e67bb88db3770fa4edb28d476ebcb5f2bef8c2b26bb10eb6505402fd1fe8; UBI=fi_PncwhpxZ%7ETaJc4qxjbaqXwf-0ORKP6pPgPg60BCKpMv5eun-GtaO5OWcoz0eOiEp8JiaDXMJObkfzZa3yCDR5UNObDmep3KiSFYEy0Bcu%7E9t2zGtH6dsn99tSeeSi206yeOJaKcpoAnkzKu7nEeIXXjXRQ__; USERNAMETYPE=3; TIEBAUID=4a3c80e70f5a3d7cfe3587c5; TIEBA_USERTYPE=87feed1da029e55d18a9bc37; BDSVRTM=0; BD_HOME=0; ";
 
-    task->cookie_ = "tbs=71c1877d94e08c5e1462258768;BAIDUID=092C32B642E358C256261F8CCC33B3E7:FG=1; BDUSS=B-cXlMb0c0bWRieTFwUHE4TVVMWE5rUDl-QjRoVzdWenRoaFh6aW5FRlEyVTlYQVFBQUFBJCQAAAAAAAAAAAEAAAAWyMKBbHR6bnA3MTU3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFBMKFdQTChXeF; BIDUPSID=092C32B642E358C256261F8CCC33B3E7; H_PS_PSSID=18880_18286_1424_19782_17944_19805_19900_19559_19807_19843_19901_18134_17001_15540_11503_10634; PSTM=1462258767; HISTORY=213f20f52d8bf07c04ab5732fab36fee721748; HOSUPPORT=1; PTOKEN=e6602542d18203454b19d23798c17f7f; SAVEUSERID=1109a219a93d862ac01ce9c8dac65b; STOKEN=0005e74cc3d51fe39c427f309616e749cf95059e4d8c9614d374cf6f3183e8d2; UBI=fi_PncwhpxZ%7ETaJczCAqA7NWC58pA1B%7EtUdrF1wxzXKaI9hPoHEoJwYtUM43Xfhn1NyESfr5WbJzRah7-bBa9upeuaVarXbVbmI7Cj7xXdc7QvbQt066an7cxW4uOromnwF76MGolHVH-AdbpswwDMG1IvFww__; USERNAMETYPE=3; TIEBAUID=a320d01d2ee5262b877d6fbf; TIEBA_USERTYPE=f6f1ec33f1ac043f8929cf55; BDSVRTM=0; BD_HOME=0;";
-#endif
 
     PushNewTaskInQueue(task);
+
+#endif
+
+//雪球
+#if 0
+
+    struct TaskXueQiuPacket *task = new struct TaskXueQiuPacket;
+    task->task_id_ = 1;
+    task->task_type_ = TASK_XUEQIU;
+    task->pre_url_ = "https://xueqiu.com/S/YY/68644634";
+    task->content_ = "最佳大数据股票投资平台 网罗一切数据 通过强大的算法和高效稳定的框架，以最快的速度完成技术指标分析 baidu.nu/w1x";
+    task->cookie_ = "s=fcp16w3hx1; _sid=mP0BEblSVn3I1jV4b0GaGbsqPjMeZv; bid=7a906e5b374f3ad9d5d08fc40f09276c_io9d2xc9; webp=0; Hm_lvt_1db88642e346389874251b5a1eded6e3=1463363547; Hm_lpvt_1db88642e346389874251b5a1eded6e3=1463372109; xq_a_token=cb123cfeb3b11088022b60b138b90229f0fae5d3; xqat=cb123cfeb3b11088022b60b138b90229f0fae5d3; xq_r_token=65a6f4cce37d81779606a63714ff2abd6456ca1c; xq_is_login=1; u=2226355683; xq_token_expire=Fri%20Jun%2010%202016%2012%3A15%3A29%20GMT%2B0800%20(CST)";
+
+    PushNewTaskInQueue(task);
+
+#endif
+
+//东方股吧
+#if 0
+
+    struct TaskIGuBaPacket *task = new struct TaskIGuBaPacket;
+
+    task->task_id_ = 1;
+    task->task_type_ = TASK_IGUBA;
+
+    task->pre_url_ = "http://money.eastmoney.com/news/1282,20160517624551717.html";
+    task->content_ = "学习了";
+    task->cookie_ = "st_pvi=47292841728579; st_si=01590777518671; HAList=a-sz-300059-%u4E1C%u65B9%u8D22%u5BCC; em_hq_fls=old; VerifyCode=key=183007415410&gps=222.73.55.92&validate=DE9D53F39158C003; ut=FobyicMgeV5n3saZh_euZ6ZGJttwXu2bz277zHB-uYO9A882ZZi1D-Llx4-piklvHW7gXcr2Pa1lwTA44xHb9XRA-wdAQ0KnDYqQZMm2zk9EG9I8r4X0wSrDGwjJCZIenqyupJstFEdMGHvs9Rk4enNZQ-pubToPnEkJ-x9uFw6vbZt7YvzcwOT5_2qIolBft9VLSVQ60aBqPPiG6WB7e1FcABgBw6IGtcJAfLjZGV6HJvt94TVpyx5el2szOa2kX4GDtf748RnYTFRjqLTVDofC2FThk2be; ct=XHv8_KD9IYG7_DOTOjyRjckHfsAtyeZSaSn6n9kuSEKMnGHvaebhPrIhvTsrQ_sGC1AZFsindLFHAdD6OgHY8dv3HqZ94mjaAIVZTIP4Aiu0InxmlPcAWTElKLPdhdqctKMbrZ-oncED0B34U-2OmeV-QHGcmxWmLTLPr9lFTI8; uidal=1272044633894944%e5%9c%9f%e8%b1%86%e6%98%af%e9%81%93%e8%8f%9c; pi=1272044633894944%3ba1272044633894944%3b%e5%9c%9f%e8%b1%86%e6%98%af%e9%81%93%e8%8f%9c%3byqEGLL1wdh%2bcstZeXlvQi0GxopqCGgqLliiC6iGfU9bjSobrQP77OAsg0IAtW40id6N3onwEo2xRLvV1ROJiKXhLkAxf8mXFBEft1LzSzqNLjbgW%2f9pAYQyCB4M6vEZPI0oxlAPSwcDYcXdf%2bXYx58MZUZD%2b0fEufveRYLBeXE2XLFUGAoA2zX3gD1Tdoyt9v8fmKWre%3bYGnwQlO0erqehy3Fp0uUibkSSj%2bCOlJ5910N5h7pBD8QWKlQIN%2bQasB1iUmuJVvJOH13pZ86l3THLVqOatGkHSBUKC6RYotB%2be%2bc5VibtO6%2br232Csd%2bU9wGx%2f210e5hRiNmTzQ6VHax7gHn4NHbbBAscqBECQ%3d%3d; pu=18621532630";
+
+
+    PushNewTaskInQueue(task);
+
+#endif
+
 }
 
 } /* namespace robot_logic */

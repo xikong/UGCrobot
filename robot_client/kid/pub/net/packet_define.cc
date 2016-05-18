@@ -194,6 +194,13 @@ bool TaskHead::UnpackTaskHead(packet::DataInPacket *in, int &temp){
     ReadDataByLen(this->forge_ip_, temp, in);
     ReadDataByLen(this->forge_ua_, temp, in);
 
+    LOG_DEBUG2("task_id = %d", this->task_id_);
+    LOG_DEBUG2("cookie_id = %d", this->cookie_id_);
+    LOG_DEBUG2("cookie = %s", this->cookie_.c_str());
+    LOG_DEBUG2("content = %s", this->content_.c_str());
+    LOG_DEBUG2("forge_ip = %s", this->forge_ip_.c_str());
+    LOG_DEBUG2("forge_ua = %s", this->forge_ua_.c_str());
+
     return true;
 }
 
@@ -231,6 +238,13 @@ bool TaskTieBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp){
     ReadDataByLen(this->tbs_, temp, in);
     this->floor_num_ = in->Read32();
     ReadDataByLen(this->repost_id_, temp, in);
+
+    LOG_DEBUG2("pre_url = %s", this->pre_url_.c_str());
+    LOG_DEBUG2("kw = %s", this->kw_.c_str());
+    LOG_DEBUG2("fid = %s", this->fid_.c_str());
+    LOG_DEBUG2("tbs = %s", this->tbs_.c_str());
+    LOG_DEBUG2("floor_num = %d", this->floor_num_);
+    LOG_DEBUG2("repost_id = %s", this->repost_id_.c_str());
 
     return true;
 }
@@ -270,12 +284,38 @@ bool TaskDouBanPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp){
 
 bool TaskTaoGuBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp){
 
-    this->UnpackTaskHead(in, temp);
+	this->UnpackTaskHead(in, temp);
 
-    ReadDataByLen(this->topicID_, temp, in);
-    ReadDataByLen(this->subject_, temp, in);
+	ReadDataByLen(this->topicID_, temp, in);
+	ReadDataByLen(this->subject_, temp, in);
 
-    return true;
+	LOG_DEBUG2("topic_id = %s", this->topicID_.c_str());
+	LOG_DEBUG2("subject = %s", this->subject_.c_str());
+
+	return true;
+}
+
+bool TaskXueQiuPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp){
+
+	this->UnpackTaskHead(in, temp);
+
+	ReadDataByLen(this->pre_url_, temp, in);
+	ReadDataByLen(this->topic_id_, temp, in);
+
+	LOG_DEBUG2("pre_url = %s", this->pre_url_.c_str());
+	LOG_DEBUG2("topic_id = %s", this->topic_id_.c_str());
+
+	return true;
+}
+
+bool TaskIGuBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp){
+
+	this->UnpackTaskHead(in, temp);
+
+	ReadDataByLen(this->pre_url_, temp, in);
+	LOG_DEBUG2("pre_url = %s", this->pre_url_.c_str());
+
+	return true;
 }
 
 bool MultiTaskList::UnpackStream(const void *packet_stream, int32 len){
@@ -283,13 +323,12 @@ bool MultiTaskList::UnpackStream(const void *packet_stream, int32 len){
     this->UnpackHead(packet_stream, len);
 
     int temp = 0;
-    int16 task_type = this->in_->Read16();
     int8 task_num = this->in_->Read16();
-    LOG_MSG2("Receive task_num = %d", task_num);
 
     for(int8 i = 0; i < task_num; ++i){
 
-        LOG_MSG2("task_type = %d", task_type);
+        int task_type = this->in_->Read16();
+        LOG_DEBUG2("task_type = %d", task_type);
 
         struct TaskHead *task = NULL;
         switch(task_type){
@@ -330,20 +369,32 @@ bool MultiTaskList::UnpackStream(const void *packet_stream, int32 len){
             break;
         }
         case TASK_TAOGUBA:{
-            struct TaskTaoGuBaPacket *task_temp = new struct TaskTaoGuBaPacket;
-            task_temp->UnpackTaskBody(this->in_, temp);
-            task = (struct TaskHead *)task_temp;
-            break;
+        	struct TaskTaoGuBaPacket *task_temp = new struct TaskTaoGuBaPacket;
+        	task_temp->UnpackTaskBody(this->in_, temp);
+        	task = (struct TaskHead *)task_temp;
+        	break;
         }
+        case TASK_XUEQIU:{
+        	struct TaskXueQiuPacket *task_temp = new struct TaskXueQiuPacket;
+        	task_temp->UnpackTaskBody(this->in_, temp);
+        	task = (struct TaskHead *)task_temp;
+        	break;
+        }
+        //TUDO 其他任务
         default:
             break;
         }
 
-        //设置任务类型等
-        task->feed_server_id_ = this->server_id_;
-        task->task_type_ = task_type;
+        if(NULL == task){
+        	LOG_MSG2("Not Support This Task, task_type = %d", task_type);
+        	continue;
+        }
 
-        this->multi_task_list_.push_back(task);
+		//设置任务类型等
+		task->task_type_ = task_type;
+		task->feed_server_id_ = this->server_id_;
+
+		this->multi_task_list_.push_back(task);
     }
 
     return true;
@@ -351,15 +402,22 @@ bool MultiTaskList::UnpackStream(const void *packet_stream, int32 len){
 
 bool FeedBackTaskStatus::PackStream(void **packet_stream, int32 &packet_stream_length){
 
-    this->PackHead(FEEDBACK_TASK_STATUS_SIZE);
+	//包体长度
+	int feed_back_msg_size = FEEDBACK_TASK_STATUS_SIZE + this->error_code.size() + sizeof(int16);
+
+    this->PackHead(feed_back_msg_size);
 
     this->out_->Write16(this->task_type);
     this->out_->Write8(this->is_success);
+    this->out_->Write16(this->error_code.size());
+    this->out_->WriteData(this->error_code.c_str(), this->error_code.size());
     this->out_->Write64(this->task_id);
-    this->out_->Write32(this->cookie_id);
+    this->out_->Write64(this->cookie_id);
+
+    LOG_DEBUG2("FeedBackTask cookie_id = %d", this->cookie_id);
 
     //是否压缩加密
-    net::PacketProsess::IsZipPacket(this->is_zip_encrypt_, FEEDBACK_TASK_STATUS_SIZE,
+    net::PacketProsess::IsZipPacket(this->is_zip_encrypt_, feed_back_msg_size,
             this->out_, packet_stream, packet_stream_length);
 
     return true;

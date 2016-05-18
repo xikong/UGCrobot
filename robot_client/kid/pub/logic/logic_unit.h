@@ -46,7 +46,7 @@ class SomeUtils{
 
     static std::string GetLocalTime(const time_t time);
 
-    static long GetCurrentTime();
+    static long GetCurrentTimeMs();
 };
 
 class CoreSoUtils{
