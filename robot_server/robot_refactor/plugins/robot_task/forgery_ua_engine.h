@@ -26,7 +26,7 @@ public:
 	virtual ~ForgeryUAManager();
 public:
 	bool Init(robot_task_logic::CrawlerTaskDB *task_db);
-	bool SetUAs();
+	bool FetchForgeryUAs();
 
 	// 如果 forgery_ua 的 id 为 0, 则按默认算法分配 ua
 	// 否则分配指定 id 的 ua

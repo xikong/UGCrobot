@@ -11,6 +11,31 @@
 
 namespace base_logic {
 
+time_t TiebaTask::next_exec_time = 0;
+int TiebaTask::TICK = 0;
+
+time_t WeiboTask::next_exec_time = 0;
+int WeiboTask::TICK = 0;
+
+time_t TianyaTask::next_exec_time = 0;
+int TianyaTask::TICK = 0;
+
+time_t QZoneTask::next_exec_time = 0;
+int QZoneTask::TICK = 0;
+
+time_t MaopuTaskInfo::next_exec_time = 0;
+int MaopuTaskInfo::TICK = 0;
+
+time_t DoubanTaskInfo::next_exec_time = 0;
+int DoubanTaskInfo::TICK = 0;
+
+time_t Taoguba::next_exec_time = 0;
+int Taoguba::TICK = 0;
+
+time_t SnowballTaskInfo::next_exec_time = 0;
+int SnowballTaskInfo::TICK = 0;
+
+
 CrawlerScheduler::CrawlerScheduler() {
     data_ = new Data();
 }
@@ -189,6 +214,20 @@ void LoginCookie::ValueSerialization(base_logic::DictionaryValue* dict) {
     		cookie_id(), ip_.id(), ip_.ip().c_str(), ua_.id());
 }
 
+RobotTaskContent::RobotTaskContent(const RobotTaskContent& other) {
+	id_ = other.id();
+	task_type_ = other.task_type();
+	user_type_ = other.user_type();
+	content_ = other.content();
+}
+
+RobotTaskContent& RobotTaskContent::operator=(const RobotTaskContent& other) {
+	id_ = other.id();
+	task_type_ = other.task_type();
+	user_type_ = other.user_type();
+	content_ = other.content();
+}
+
 void RobotTaskContent::ValueSerialization(base_logic::DictionaryValue* dict) {
 	dict->GetBigInteger(L"id", &id_);
 	dict->GetShortInteger(L"task_type", &task_type_);
@@ -202,10 +241,11 @@ void RobotTask::GetTaskId(base_logic::DictionaryValue* dict) {
 }
 
 void RobotTask::GetDataFromKafka(base_logic::DictionaryValue* dict) {
-	std::string str;
-	dict->GetString(L"timestamp", &str);
-	base::BasicUtil::StringUtil::StringToInt64(str, &create_time_);
-	create_time_ /= 1000;
+//	std::string str;
+//	dict->GetString(L"timestamp", &str);
+//	base::BasicUtil::StringUtil::StringToInt64(str, &create_time_);
+//	create_time_ /= 1000;
+	create_time_ = time(NULL);
 }
 
 void RobotTask::GetDataFromDb(base_logic::DictionaryValue* dict) {
@@ -441,8 +481,8 @@ std::string DoubanTaskInfo::SerializeSelf() {
 
 void SnowballTaskInfo::GetDataFromKafka(base_logic::DictionaryValue* dict) {
 	RobotTask::GetDataFromKafka(dict);
-	dict->GetString(L"pre_url", &url_);
-	dict->GetString(L"topic_id", &topic_id_);
+	dict->GetString(L"url", &url_);
+	dict->GetString(L"topicId", &topic_id_);
 }
 
 RobotTaskBase* SnowballTaskInfo::CreateTaskPacketUnit() {

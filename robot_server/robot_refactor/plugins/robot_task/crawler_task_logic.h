@@ -23,18 +23,39 @@ struct Config {
 	int recycle_task_tick;
 	int clean_no_effective_client_tick;
 	int fetch_ip_tick;
-	int fetch_cookie_tick;
+	int flush_cookie_use_time_tick;
 	int fetch_content_tick;
-	//
+	int fetch_cookies_tick;
+
+	// 每种平台任务执行间隔
+	int tieba_tick;
+	int weibo_tick;
+	int tianya_tick;
+	int qzone_tick;
+	int maopu_tick;
+	int douban_tick;
+	int taoguba_tick;
+	int snowball_tick;
+
+	// cookie 使用间隔
 	int cookie_use_tick;
 	Config(): assign_task_tick(60)
 			, fetch_task_tick(10)
 			, recycle_task_tick(20)
 			, clean_no_effective_client_tick(20)
 			, fetch_ip_tick(60)
-			, fetch_cookie_tick(60)
+			, flush_cookie_use_time_tick(60)
 			, fetch_content_tick(60)
-			, cookie_use_tick(24*60*60) { }
+			, fetch_cookies_tick(60)
+			, cookie_use_tick(24*60*60)
+			, tieba_tick(10*60)
+			, weibo_tick(10*60)
+			, tianya_tick(10*60)
+			, qzone_tick(10*60)
+			, maopu_tick(10*60)
+			, douban_tick(10*60)
+			, taoguba_tick(10*60)
+			, snowball_tick(10*60) { }
 	void Deserialize(base_logic::DictionaryValue *dict);
 	void Print() const;
 };
@@ -73,6 +94,8 @@ public:
 
 private:
 	bool Init();
+
+	void RobotTaskInit() const;
 
 	bool Startup();
 

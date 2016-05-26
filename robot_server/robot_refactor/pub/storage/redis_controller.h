@@ -10,27 +10,27 @@
 
 namespace base_logic {
 
-class RedisController: public DataControllerEngine {
-public:
-	RedisController() {
-	}
-	virtual ~RedisController() {
-	}
-public:
-	void Release();
-	void InitParam(std::list<base::ConnAddr>* addrlist) {
-	}
-public:
-	bool WriteData(const int32 type, base_logic::Value* value);
+class RedisController : public DataControllerEngine {
+ public:
+  RedisController() {
+  }
+  virtual ~RedisController() {
+  }
+ public:
+  void Release();
+  void InitParam(std::list<base::ConnAddr>* addrlist) {
+  }
+ public:
+  bool WriteData(const int32 type, base_logic::Value* value);
 
-	bool ReadData(const int32 type, base_logic::Value* value,
-			void (*storage_get)(void*, base_logic::Value*));
-private:
-	bool ReadHashData(base_logic::Value* value,
-			void (*storage_get)(void*, base_logic::Value*));
+  bool ReadData(const int32 type, base_logic::Value* value,
+                void (*storage_get)(void*, base_logic::Value*));
+ private:
+  bool ReadHashData(base_logic::Value* value,
+                    void (*storage_get)(void*, base_logic::Value*));
 
-	bool ReadKeyValueData(base_logic::Value* value,
-			void (*storage_get)(void*, base_logic::Value*));
+  bool ReadKeyValueData(base_logic::Value* value,
+                        void (*storage_get)(void*, base_logic::Value*));
 };
 }  // namespace base_logic
 

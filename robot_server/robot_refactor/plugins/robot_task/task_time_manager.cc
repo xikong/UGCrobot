@@ -44,13 +44,16 @@ void TaskTimeManager::TaskTimeEvent(int opcode, int time) {
     	UpdateExecTasks();
         break;
       case TIME_FETCH_IP:
-    	  forgery_ip_mgr_->SetIPs();
+    	  forgery_ip_mgr_->FetchForgeryIPs();
     	  break;
       case TIME_WRITE_COOKIE_USE_TIME:
     	  cookie_mgr_->WriteCookieUseTime(0);
     	  break;
-      case TIME_FETCH_CONTENT:
-    	  schduler_mgr_->SetBatchContents();
+//      case TIME_FETCH_CONTENT:
+//    	  schduler_mgr_->SetBatchContents();
+//    	  break;
+      case TIME_FETCH_COOKIES:
+    	  cookie_mgr_->FetchCookies(0);
     	  break;
       default:
         break;

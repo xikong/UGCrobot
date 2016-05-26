@@ -11,34 +11,34 @@
 namespace base_logic {
 
 DataControllerEngine* DataControllerEngine::Create(int32 type) {
-	DataControllerEngine* engine = NULL;
-	switch (type) {
-	case REIDS_TYPE: {
-		engine = new RedisController();
-		break;
-	}
-	case MYSQL_TYPE: {
-		engine = new MysqlController();
-		break;
-	}
-	case MEM_TYPE: {
-		engine = new MemController();
-		break;
-	}
-	default:
-		break;
-	}
-	return engine;
+  DataControllerEngine* engine = NULL;
+  switch (type) {
+    case REIDS_TYPE: {
+      engine = new RedisController();
+      break;
+    }
+    case MYSQL_TYPE: {
+      engine = new MysqlController();
+      break;
+    }
+    case MEM_TYPE: {
+      engine = new MemController();
+      break;
+    }
+    default:
+      break;
+  }
+  return engine;
 }
 
 void DataControllerEngine::Init(config::FileConfig* config) {
-	base_dic::RedisPool::Init(config->redis_list_);
-	base_db::MysqlDBPool::Init(config->mysql_db_list_);
+  base_dic::RedisPool::Init(config->redis_list_);
+  base_db::MysqlDBPool::Init(config->mysql_db_list_);
 }
 
 void DataControllerEngine::Dest() {
-	base_dic::RedisPool::Dest();
-	base_db::MysqlDBPool::Dest();
+  base_dic::RedisPool::Dest();
+  base_db::MysqlDBPool::Dest();
 }
 
 }  // namespace base_logic

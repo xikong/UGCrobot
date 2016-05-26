@@ -14,7 +14,7 @@
 //#define TIMER_SERVER_STARTUP		 10002
 
 #define TIME_FETCH_IP				 10003	// 10s, 更新一次
-#define TIME_WRITE_COOKIE_USE_TIME			 10004	// 60s, 更新一次
+#define TIME_WRITE_COOKIE_USE_TIME	 10004	// 60s, 更新一次
 
 #define TIME_CLEAN_NO_EFFECTIVE      10005
 #define TIME_RECYCLINGTASK           10006
@@ -23,6 +23,7 @@
 #define TIME_UPDATE_EXEC_TASKS		 10009
 
 #define TIME_FETCH_CONTENT			 10010	// 10s, 更新一次
+#define TIME_FETCH_COOKIES			 10011	// 60s, 更新一次
 
 class CookieManager;
 class ForgeryIPManager;

@@ -27,7 +27,8 @@ enum TaskState {
 	TASK_SUCCESS = 9,
 	TASK_TIMEOUT = 10,
 	TASK_SEND_FAILED= 11,
-	TASK_INVALID = 12
+	TASK_INVALID = 12,
+	TASK_NO_RESPNOSE = 13
 };
 
 enum TASKTYPE {
@@ -566,6 +567,13 @@ public:
 
 class RobotTaskContent {
 public:
+	RobotTaskContent()
+	: id_(0),
+	  task_type_(0),
+	  user_type_(0) {}
+	RobotTaskContent(const RobotTaskContent& other);
+	RobotTaskContent& operator=(const RobotTaskContent& other);
+
 	void ValueSerialization(base_logic::DictionaryValue* dict);
 	int64 id() const {return id_;}
 	std::string content() const {return content_;}
@@ -662,6 +670,8 @@ public:
 	virtual RobotTaskBase* CreateTaskPacketUnit() = 0;
 	virtual void SetTaskPacketUnit(RobotTaskBase *task);
 	virtual std::string SerializeSelf();
+	virtual bool IsValid() const { return true; }
+	virtual bool IsReady(const time_t current_time) const { return false; };
 
 	void set_id(int64 id) {id_ = id;}
 	int64 id() const {return id_;}
@@ -687,6 +697,8 @@ public:
 	void set_content(base_logic::RobotTaskContent &con) { content_ = con; }
 	base_logic::RobotTaskContent content() const { return content_; }
 
+public:
+	static const int TTL = 3600;
 protected:
 	int64		id_;		//任务 id
 	TaskType	type_;
@@ -707,12 +719,24 @@ public:
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual void SetTaskPacketUnit(RobotTaskBase *task);
 	virtual std::string SerializeSelf();
+	virtual bool IsReady(const time_t current_time) const {
+		if (current_time < next_exec_time)
+			return false;
+		next_exec_time = current_time + TICK;
+		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
+		return true;
+	};
 public:
 	void set_topic_id(const std::string &topic_id) {topic_id_ = topic_id;}
 	std::string topic_id() const {return topic_id_;}
 	void set_host_uin(const std::string host_uin) {host_uin_ = host_uin;}
 	std::string host_uin() const {return host_uin_;}
+
+	static void set_tick(int tick) { TICK = tick; }
 private:
+	static time_t 	next_exec_time;
+	static int		TICK;
+
 	std::string		topic_id_;
 	std::string		host_uin_;
 };
@@ -726,6 +750,14 @@ public:
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual void SetTaskPacketUnit(RobotTaskBase *task);
 	virtual std::string SerializeSelf();
+	virtual bool IsReady(const time_t current_time) const {
+		if (current_time < next_exec_time)
+			return false;
+		next_exec_time = current_time + TICK;
+		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
+		return true;
+	};
+
 public:
 	void set_post_time(int64 post_time) {post_time_ = post_time;}
 	uint64 post_time() const {return post_time_;}
@@ -739,7 +771,11 @@ public:
 	std::string username() const {return username_;}
 //	void set_content(const std::string &content) {content_ = content;}
 //	std::string content() const {return content_;}
+	static void set_tick(int tick) { TICK = tick; }
 private:
+	static time_t 	next_exec_time;
+	static int		TICK;
+
 //	std::string		url_;			//当前帖子地址
 	std::string		title_;			//帖子标题
 	std::string		user_id_;		//发帖楼主id
@@ -755,6 +791,14 @@ public:
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual void SetTaskPacketUnit(RobotTaskBase *task);
 	virtual std::string SerializeSelf();
+	virtual bool IsValid() const { return !repost_id_.empty(); }
+	virtual bool IsReady(const time_t current_time) const {
+		if (current_time < next_exec_time)
+			return false;
+		next_exec_time = current_time + TICK;
+		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
+		return true;
+	};
 
 public:
 //	void set_addr(const std::string &addr) {addr_ = addr;}
@@ -780,7 +824,12 @@ public:
 
 	void set_repost_id(const std::string &repost_id) {repost_id_ = repost_id;}
 	std::string repost_id() const {return repost_id_;}
+
+	static void set_tick(int tick) { TICK = tick; }
 private:
+	static time_t 	next_exec_time;
+	static int		TICK;
+
 //	std::string		url_;			//当前帖子地址
 	std::string		kw_;			//贴吧名
 	std::string		fid_;
@@ -795,6 +844,13 @@ public:
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual std::string SerializeSelf();
+	virtual bool IsReady(const time_t current_time) const {
+		if (current_time < next_exec_time)
+			return false;
+		next_exec_time = current_time + TICK;
+		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
+		return true;
+	};
 public:
 //	void set_addr(const std::string &addr) {addr_ = addr;}
 //	std::string addr() const {return addr_;}
@@ -804,7 +860,11 @@ public:
 	int64 host_uin() const {return host_uin_;}
 //	void set_content(const std::string &content) {content_ = content;}
 //	std::string content() const {return content_;}
+	static void set_tick(int tick) { TICK = tick; }
 private:
+	static time_t 	next_exec_time;
+	static int		TICK;
+
 	std::string		topic_id_;		//留言对象
 	int64			host_uin_;		//对方的 qq 号
 //	std::string		content_;		//回复内容
@@ -819,10 +879,21 @@ public:
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual void SetTaskPacketUnit(RobotTaskBase *task);
 	virtual std::string SerializeSelf();
+	virtual bool IsReady(const time_t current_time) const {
+		if (current_time < next_exec_time)
+			return false;
+		next_exec_time = current_time + TICK;
+		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
+		return true;
+	};
 
 	std::string topic_id() const {return topic_id_;}
 	std::string subject() const {return subject_;}
+	static void set_tick(int tick) { TICK = tick; }
 private:
+	static time_t 	next_exec_time;
+	static int		TICK;
+
 	std::string topic_id_;
 	std::string subject_;
 };
@@ -833,6 +904,13 @@ public:
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual std::string SerializeSelf();
+	virtual bool IsReady(const time_t current_time) const {
+		if (current_time < next_exec_time)
+			return false;
+		next_exec_time = current_time + TICK;
+		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
+		return true;
+	};
 public:
 	void set_cat_id(const std::string &cat_id) { cat_id_ = cat_id; }
 	std::string cat_id() const { return cat_id_; }
@@ -845,7 +923,12 @@ public:
 
 	void set_currformid(const std::string &currformid) { currformid_ = currformid; }
 	std::string currformid() const { return currformid_; }
+
+	static void set_tick(int tick) { TICK = tick; }
 private:
+	static time_t 	next_exec_time;
+	static int		TICK;
+
 	std::string cat_id_;
 	std::string catalog_id_;
 	std::string fmtoken_;
@@ -858,6 +941,17 @@ public:
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual std::string SerializeSelf();
+	virtual bool IsReady(const time_t current_time) const {
+		if (current_time < next_exec_time)
+			return false;
+		next_exec_time = current_time + TICK;
+		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
+		return true;
+	};
+	static void set_tick(int tick) { TICK = tick; }
+private:
+	static time_t 	next_exec_time;
+	static int		TICK;
 };
 
 class SnowballTaskInfo: public RobotTask {
@@ -866,10 +960,21 @@ public:
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual std::string SerializeSelf();
+	virtual bool IsReady(const time_t current_time) const {
+		if (current_time < next_exec_time)
+			return false;
+		next_exec_time = current_time + TICK;
+		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
+		return true;
+	};
 public:
 	void set_topic_id(const std::string topic_id) { topic_id_ = topic_id; }
 	std::string topic_id() const { return topic_id_; }
+	static void set_tick(int tick) { TICK = tick; }
 private:
+	static time_t 	next_exec_time;
+	static int		TICK;
+
 	std::string topic_id_;
 };
 

@@ -27,10 +27,10 @@ bool ForgeryUAManager::Init(robot_task_logic::CrawlerTaskDB *task_db) {
 		return false;
 	}
 	task_db_ = task_db;
-	return SetUAs();
+	return FetchForgeryUAs();
 }
 
-bool ForgeryUAManager::SetUAs() {
+bool ForgeryUAManager::FetchForgeryUAs() {
 	if (NULL == task_db_) {
 		return false;
 	}

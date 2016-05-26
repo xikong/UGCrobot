@@ -19,6 +19,7 @@
 class CookieManager;
 class ForgeryIPManager;
 class ForgeryUAManager;
+class ContentManager;
 
 namespace robot_task_logic {
 
@@ -32,40 +33,6 @@ class TaskSchdulerCache {
     TASKINFO_MAP          task_idle_map_;
     TASKINFO_MAP          task_exec_map_;
     TASKINFO_LIST         task_temp_list_;
-};
-
-typedef std::list<base_logic::RobotTaskContent>		TaskContentList;
-struct TaskContent {
-	TaskContent(): task_type(0), cur_it(content_list.end()) {}
-	int16			task_type;
-	TaskContentList	content_list;
-	TaskContentList::iterator cur_it;
-};
-
-typedef std::map<int16, struct TaskContent>	TaskContentMap;
-class TaskContentCache {
-public:
-	bool GetContentByTaskType(int16 task_type, base_logic::RobotTaskContent &content) {
-		if (content_map_.end() == content_map_.find(task_type)) {
-			LOG_MSG2("don't find content with task_type: %d", task_type);
-			return false;
-		}
-		struct TaskContent &con = content_map_[task_type];
-		LOG_DEBUG2("task_type: %d, content_list.size = %d",
-				task_type, con.content_list.size());
-		if (con.content_list.size() <= 0) {
-			return false;
-		}
-		if (con.content_list.end() == con.cur_it) {
-			con.cur_it = con.content_list.begin();
-		}
-		content = *con.cur_it;
-		++con.cur_it;
-		return true;
-	}
-private:
-	friend class TaskSchdulerManager;
-	TaskContentMap	content_map_;
 };
 
 class TaskSchdulerManager {
@@ -97,15 +64,10 @@ class TaskSchdulerManager {
 
     uint32 GetExecTasks();
 
-    void SetBatchCookies();
-
     bool RemoveInvalidCookie(int64 cookie_id);
 
-    void SetBatchContents();
  private:
     void Init();
-
-    void SetContent(const base_logic::RobotTaskContent &con);
 
     void SetUpdateTime(const int64 plat_id, const int64 update_time);
 
@@ -121,7 +83,7 @@ class TaskSchdulerManager {
     robot_task_logic::CrawlerTaskDB*       task_db_;
 	CookieManager						   *cookie_cache_;
 	ForgeryIPManager					   *ip_cache_;
-	TaskContentCache					   *content_cache_;
+	ContentManager						   *content_cache_;
 	ForgeryUAManager					   *ua_cache_;
 	Config								   *config_;
 };

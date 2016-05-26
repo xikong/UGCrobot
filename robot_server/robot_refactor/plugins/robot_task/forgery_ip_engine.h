@@ -29,7 +29,7 @@ public:
 	// 如果 forgery_ip 的 id 不为空，则根据该 id 获取 ip
 	// 否则根据默认算法获取 ip
 	bool GetIP(base_logic::ForgeryIP &forgery_ip);
-	bool SetIPs();
+	bool FetchForgeryIPs();
 	bool Empty() const { return ip_cache_.ip_container.ip_list.empty(); }
 private:
 	typedef std::list<base_logic::ForgeryIP>	IPList;

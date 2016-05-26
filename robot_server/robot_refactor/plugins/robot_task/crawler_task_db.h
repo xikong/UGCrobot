@@ -48,7 +48,7 @@ class CrawlerTaskDB {
 
     bool GetCookies(int count, uint64 attr_id, uint64 usable_time, std::list<base_logic::LoginCookie>* cookies_list);
 
-    bool FetchBatchTaskContent(int16 task_type, std::list<base_logic::RobotTaskContent> *list, bool is_new = true);
+    bool FetchBatchTaskContent(int16 task_type, std::list<base_logic::RobotTaskContent> *list, bool is_new = false);
  public:
     static void CallBackFectchBatchForgeryUA(void* param,
                 base_logic::Value* value);
