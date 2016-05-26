@@ -6,9 +6,9 @@ namespace en_de {
 using namespace std;
 
 //jiami
-char* str_en_8byte(char *clearmsg,int rounds);
+char* str_en_8byte(char *clearmsg, int rounds);
 //jiemi
-char* str_de_8byte(char *encryptedmsg,unsigned long rounds);
+char* str_de_8byte(char *encryptedmsg, unsigned long rounds);
 
 //fengzhuang
 string str_en(string a, int rounds);

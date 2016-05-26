@@ -63,6 +63,23 @@ public:
 		}
 		return r;
 	}
+  static inline bool GetAddressBySocket(const int sock, std::string &ip,
+                                        uint16 &port) {
+    bool r = true;
+    struct sockaddr_storage sa;
+    int salen = sizeof(sa);
+    if (::getpeername(sock, (struct sockaddr*) &sa, (socklen_t *) &salen)
+        == -1) {
+      return false;
+    }
+
+    if (sa.ss_family == AF_INET) {
+      struct sockaddr_in *s = (struct sockaddr_in*) &sa;
+      ip = std::string(::inet_ntoa(s->sin_addr));
+      port = ::ntohs(s->sin_port);
+    }
+    return r;
+  }
 };
 
 class CoreSoUtils {

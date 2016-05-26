@@ -54,7 +54,7 @@ enum operatorcode {
 	REPLY_HARDINFO = 0x3EC,
 	CRAWLER_REG_FAILED = 0x3ED,
 
-	PLUGIN_SVC_MGR_REG = 0x4BB,		// 1211, PlubinSVC 注册
+	REGISTER_SERVER = 0x4BB,		// 1211, PlubinSVC 注册
 	PLUGIN_SVC_REG_STATE = 0x4BC,	// 1212, PluginSVC 管理注册成功
 	PLUGIN_SVC_MGR_ROUTER_REG = 0x4CB,	// 1227, Router登录PluginSVC
 	REPLY_ROUTER_REG = 0x4CC,
@@ -151,7 +151,7 @@ struct RouterStatus: public PacketHead {
 };
 
 #define PLUGIN_SVC_REG_SIZE (sizeof(int16) * 2 + PASSWORD_SIZE-1 + MAC_SIZE-1)
-struct PluginSvcMgrReg: public PacketHead {
+struct RegisterServer: public PacketHead {
 	int16 level;
 	char password[PASSWORD_SIZE];
 	char mac[MAC_SIZE];

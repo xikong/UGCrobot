@@ -431,6 +431,8 @@ std::string TianyaTask::SerializeSelf() {
 	return os.str();
 }
 
+TiebaTask::TypeQueue TiebaTask::type_queue_;
+
 void TiebaTask::GetDataFromKafka(base_logic::DictionaryValue *dict) {
 //	id_ = base::SysRadom::GetInstance()->GetRandomIntID();
 	RobotTask::GetDataFromKafka(dict);

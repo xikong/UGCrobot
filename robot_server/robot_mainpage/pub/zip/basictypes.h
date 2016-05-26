@@ -20,36 +20,36 @@
 
 #define _USEC_PER_SEC 1000000
 
-typedef signed char                    schar;
-typedef signed char                    int8;
-typedef short                          int16;
+typedef signed char schar;
+typedef signed char int8;
+typedef short int16;
 
 #ifndef _INT32
 #define _INT32
-typedef int                            int32;
+typedef int int32;
 #endif
 
 #if __LP64__
-typedef long                           int64;
+typedef long int64;
 #else
-typedef long long                      int64;
+typedef long long int64;
 #endif
 
-typedef unsigned char                  uint8;
-typedef unsigned short                 uint16;
+typedef unsigned char uint8;
+typedef unsigned short uint16;
 
 #ifndef _UINT32
 #define _UINT32
-typedef unsigned int                   uint32;
+typedef unsigned int uint32;
 #endif
 
 #if __LP64__
-typedef unsigned long                  uint64;
+typedef unsigned long uint64;
 #else
-typedef unsigned long long             uint64;
+typedef unsigned long long uint64;
 #endif
 
-typedef signed int                     char32;
+typedef signed int char32;
 
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
     TypeName(const TypeName&);             \
@@ -67,14 +67,16 @@ typedef signed int                     char32;
 
 int32 GetRandomTime(void);
 
-template <typename T, size_t N>
+template<typename T, size_t N>
 char (&ArraySizeHelper(T (&array)[N]))[N];
 
 #define arraysize(array) (sizeof(ArraySizeHelper(array)))
 
-void LogAssert(const char * function, const char * file, int line, const char * expression);
+void LogAssert(const char * function, const char * file, int line,
+           const char * expression);
 
-inline void MigAssert(bool result, const char * function, const char * file, int line, const char * expression) {
+inline void MigAssert(bool result, const char * function, const char * file,
+                      int line, const char * expression) {
   if (!result) {
     LogAssert(function, file, line, expression);
     abort();

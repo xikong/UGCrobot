@@ -1,9 +1,9 @@
 //  Copyright (c) 2015-2015 The KID Authors. All rights reserved.
 //  Created on: 2015年9月16日 Author: kerry
-#include "manager/manager_init.h"
+#include "manager_init.h"
+#include "manager_logic.h"
 #include "core/common.h"
 #include "core/plugins.h"
-#include "manager/manager_logic.h"
 
 
 struct managerplugin{

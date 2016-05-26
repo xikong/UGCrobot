@@ -18,23 +18,23 @@ namespace tieba_task_logic {
 
 class CrawlerTaskKafka {
  public:
-	CrawlerTaskKafka();
-    virtual ~CrawlerTaskKafka();
+  CrawlerTaskKafka();
+  virtual ~CrawlerTaskKafka();
 
  public:
 
-    bool FectchBatchTempTask(std::list<base_logic::TiebaTask> *list);
+  bool FectchBatchTempTask(std::list<base_logic::TiebaTask> *list);
 
-    void SetTaskInfo(base_logic::RobotTask &task_info, base_logic::DictionaryValue* task_info_dic);
+  void SetTaskInfo(base_logic::RobotTask &task_info,
+                   base_logic::DictionaryValue* task_info_dic);
 
-    bool AddStorageInfo(const std::list<struct StorageUnit*>& list,
-            const int32 type = 1);
+  bool AddStorageInfo(const std::list<struct StorageUnit*>& list,
+                      const int32 type = 1);
 
  private:
-    kafka_consumer kafka_consumer_;
-    kafka_producer kafka_producer_;
+  kafka_consumer kafka_consumer_;
+  kafka_producer kafka_producer_;
 };
 }  // namespace crawler_task_logic
-
 
 #endif /* TASK_DB_H_ */

@@ -8,88 +8,86 @@
 #include "basic/basictypes.h"
 #include "net/comm_head.h"
 #include "net/packet_processing.h"
-#include "../../pub/share/manager_info.h"
+#include "share/session_engine.h"
 #include "crawler_task_db.h"
 #include "crawler_task_kafka.h"
+#include "robot_config.h"
 #include "task_schduler_engine.h"
 #include "task_time_manager.h"
-
 
 namespace tieba_task_logic {
 
 class CrawlerTasklogic {
  public:
-    CrawlerTasklogic();
-    virtual ~CrawlerTasklogic();
+  CrawlerTasklogic();
+  virtual ~CrawlerTasklogic();
 
  private:
-    static CrawlerTasklogic    *instance_;
-    static base_logic::RobotTask::TaskType task_type_;
+  static CrawlerTasklogic *instance_;
+  static base_logic::RobotTask::TaskType task_type_;
 
  public:
-    static CrawlerTasklogic *GetInstance();
-    static void FreeInstance();
+  static CrawlerTasklogic *GetInstance();
+  static void FreeInstance();
 
  public:
-    bool OnTaskConnect(struct server *srv, const int socket);
+  bool OnTaskConnect(struct server *srv, const int socket);
 
-    bool OnTaskMessage(struct server *srv, const int socket,
-            const void *msg, const int len);
+  bool OnTaskMessage(struct server *srv, const int socket, const void *msg,
+                     const int len);
 
-    bool OnTaskClose(struct server *srv, const int socket);
+  bool OnTaskClose(struct server *srv, const int socket);
 
-    bool OnBroadcastConnect(struct server *srv, const int socket,
-            const void *data, const int len);
+  bool OnBroadcastConnect(struct server *srv, const int socket,
+                          const void *data, const int len);
 
-    bool OnBroadcastMessage(struct server *srv, const int socket,
-            const void *msg, const int len);
+  bool OnBroadcastMessage(struct server *srv, const int socket, const void *msg,
+                          const int len);
 
-    bool OnBroadcastClose(struct server *srv, const int socket);
+  bool OnBroadcastClose(struct server *srv, const int socket);
 
-    bool OnIniTimer(struct server *srv);
+  bool OnIniTimer(struct server *srv);
 
-    bool OnTimeout(struct server *srv, char* id, int opcode, int time);
+  bool OnTimeout(struct server *srv, char* id, int opcode, int time);
 
  private:
-    bool Init();
+  bool Init();
 
-    bool Startup();
+  bool Startup();
 
-    void InitTask(tieba_task_logic::TaskSchdulerManager* schduler_mgr);
+  void InitTask(tieba_task_logic::TaskSchdulerManager* schduler_mgr);
 
-    void TimeDistributionTask();
+  void TimeDistributionTask();
 
-    void TimeFetchTask();
+  void TimeFetchTask();
 
-    bool HandleAllConnect(struct server *srv, const int socket);
+  bool HandleAllConnect(struct server *srv, const int socket);
 
-    bool HandleAllMessage(struct server *srv, const int socket,
-            const void *msg, const int len);
+  bool HandleAllMessage(struct server *srv, const int socket, const void *msg,
+                        const int len);
 
-    bool HandleAllClose(struct server *srv, const int socket);
+  bool HandleAllClose(struct server *srv, const int socket);
  private:
-    void ReplyTaskState(struct server* srv, int socket,
-            struct PacketHead *packet, const void *msg = NULL,
-            int32 len = 0);
+  void ReplyTaskState(struct server* srv, int socket, struct PacketHead *packet,
+                      const void *msg = NULL, int32 len = 0);
 
-    void RelpyCrawlNum(struct server* srv, int socket,
-            struct PacketHead *packet, const void *msg = NULL,
-            int32 len = 0);
+  void RelpyCrawlNum(struct server* srv, int socket, struct PacketHead *packet,
+                     const void *msg = NULL, int32 len = 0);
 
-	bool OnRouterStatus(struct server *srv, int socket, 
-		struct PacketHead* packet, const void *msg = NULL, int32 len = NULL);
+  bool OnRouterStatus(struct server *srv, int socket, struct PacketHead* packet,
+                      const void *msg = NULL, int32 len = NULL);
 
-	bool OnRobotTaskStatus(struct server *srv, int socket,
-		struct PacketHead* packet, const void *msg = NULL, int32 len = NULL);
-    void StorageMethod(struct server* srv, int socket,
-                struct PacketHead *packet, int32 type = 1,
-                const void *msg = NULL,
-                int32 len = 0);
+  bool OnRobotTaskStatus(struct server *srv, int socket,
+                         struct PacketHead* packet, const void *msg = NULL,
+                         int32 len = NULL);
+  void StorageMethod(struct server* srv, int socket, struct PacketHead *packet,
+                     int32 type = 1, const void *msg = NULL, int32 len = 0);
  private:
-    plugin_share::ManagerInfo				    *manager_info_;
-    scoped_ptr<tieba_task_logic::CrawlerTaskDB>             task_db_;
-    scoped_ptr<tieba_task_logic::TaskTimeManager>           task_time_mgr_;
-    router_schduler::SchdulerEngine*                         router_schduler_engine_;
+  Config *config_;
+  plugin_share::SessionManager *session_mgr_;
+  scoped_ptr<tieba_task_logic::CrawlerTaskDB> task_db_;
+  scoped_ptr<tieba_task_logic::TaskTimeManager> task_time_mgr_;
+  router_schduler::SchdulerEngine* router_schduler_engine_;
 };
 
 }  // // namespace crawler_task_logic

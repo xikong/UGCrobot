@@ -16,7 +16,7 @@ TaskSchdulerManager* TaskSchdulerEngine::schduler_mgr_ = NULL;
 TaskSchdulerEngine* TaskSchdulerEngine::schduler_engine_ = NULL;
 
 TaskSchdulerManager::TaskSchdulerManager() :
-		crawler_count_(0), task_db_(NULL), manager_info_(NULL) {
+		crawler_count_(0), task_db_(NULL), session_mgr_(NULL) {
 	task_cache_ = new TaskSchdulerCache();
 	cookie_cache_ = new CookieCache();
 	ip_cache_ = new IPCache();
@@ -41,19 +41,26 @@ void TaskSchdulerManager::InitDB(tieba_task_logic::CrawlerTaskDB* task_db) {
 	SetBatchCookies();
 }
 
+void TaskSchdulerManager::FetchIP() {
+  base_logic::WLockGd lk(lock_);
+  ip_cache_->ip_list_.clear();
+  task_db_->FectchBatchForgeryIP(&ip_cache_->ip_list_);
+  LOG_DEBUG2("forgery ip size: %d", ip_cache_->ip_list_.size());
+}
+
 void TaskSchdulerManager::Init(
 		router_schduler::SchdulerEngine* crawler_engine) {
 	crawler_schduler_engine_ = crawler_engine;
 }
 
-void TaskSchdulerManager::InitManagerInfo(plugin_share::ManagerInfo *info) {
-	manager_info_ = info;
+void TaskSchdulerManager::InitManagerInfo(plugin_share::SessionManager *session_mgr) {
+	session_mgr_ = session_mgr;
 }
 
 void TaskSchdulerManager::SetBatchCookies() {
 	std::list<base_logic::LoginCookie> list;
 	base_logic::WLockGd lk(lock_);
-	task_db_->GetCookies(GET_COOKIES_PER_TIME, cookie_cache_->last_time, &list);
+	task_db_->GetCookies(GET_COOKIES_PER_TIME, 0, &list);
 	while (list.size() > 0) {
 		base_logic::LoginCookie info = list.front();
 		list.pop_front();
@@ -89,7 +96,7 @@ void TaskSchdulerManager::SetCookie(const base_logic::LoginCookie& info) {
 }
 
 bool IsMainTask(base_logic::TiebaTask &task) {
-	if (task.MAIN == task.type()) {
+	if (task.is_main_task()) {
 		return true;
 	}
 	return false;
@@ -126,11 +133,11 @@ void TaskSchdulerManager::FetchBatchTask(std::list<base_logic::TiebaTask> *list,
 //        task_cache_->task_idle_list_[info.id()] = info;
 		LOG_DEBUG2("fetch task, task_type = %lld, task_idle_list.size() = %d",
 				info.type(), task_cache_->task_idle_list_.size());
-		if (base_logic::RobotTask::MAIN == info.type()) {
-			task_cache_->task_idle_list_.remove_if(IsMainTask);
-			LOG_DEBUG2("after remove main tasks, task_idle_list.size() = %d",
-					task_cache_->task_idle_list_.size());
-		}
+//		if (info.is_main_task()) {
+//			task_cache_->task_idle_list_.remove_if(IsMainTask);
+//			LOG_DEBUG2("after remove main tasks, task_idle_list.size() = %d",
+//					task_cache_->task_idle_list_.size());
+//		}
 		task_cache_->task_idle_list_.push_back(info);
 		base::SysRadom::GetInstance()->DeinitRandom();
 	}
@@ -260,7 +267,7 @@ bool TaskSchdulerManager::DistributionTempTask() {
 
 bool TaskSchdulerManager::FilterTask(base_logic::TiebaTask &task) {
 	int ret = false;
-	if (task.MAIN == task.type()) {
+	if (task.is_main_task()) {
 		return false;
 	}
 	base_logic::TiebaTask tieba_task;
@@ -279,10 +286,12 @@ bool TaskSchdulerManager::FilterTask(base_logic::TiebaTask &task) {
 }
 
 bool TaskSchdulerManager::DistributionTask() {
-	if (NULL == manager_info_) {
-		LOG_MSG("wait server init complete");
+	if (NULL == session_mgr_) {
+		LOG_MSG("wait server start up");
 		return false;
 	}
+	base_logic::MLockGd lock(session_mgr_->lock_);
+	plugin_share::ServerSession *srv_session = session_mgr_->GetServer();
 	int32 base_num = 1;
 	int data_length = 0;
 	time_t current_time = time(NULL);
@@ -295,8 +304,8 @@ bool TaskSchdulerManager::DistributionTask() {
 	cookie_cache_->SortCookies();
 
 	struct AssignTiebaTask task;
-	MAKE_HEAD(task, ASSIGN_TIEBA_TASK, 0, 0, 0, 0, 0, 0,
-			manager_info_->svr_info.id, 0);
+	MAKE_HEAD(task, ASSIGN_TIEBA_TASK, 0, 0, 0, 0, 0, srv_session->server_type(),
+			srv_session->id(), 0);
 	int crawler_type = task_db_->GetCrawlerTypeByOpCode(ASSIGN_TIEBA_TASK);
 	LOG_DEBUG2("crawler type = %d, get from mysql", crawler_type);
 	if (!crawler_schduler_engine_->CheckOptimalRouter(crawler_type)) {
@@ -312,18 +321,15 @@ bool TaskSchdulerManager::DistributionTask() {
 	for (; it != task_cache_->task_idle_list_.end(), index < count; index++) {
 		base_logic::LoginCookie cookie;
 		base_logic::TiebaTask& info = *it++;
-
+		if (info.type_queue_.front() != info.type()) {
+		  continue;
+		}
 		if (info.create_time()+30*60 < current_time) {
 			LOG_DEBUG2("task timeout, url = %s, current_time = %d, create_time = %d",
 					info.url().c_str(), current_time, info.create_time());
 			info.set_state(TASK_INVALID);
 			continue;
 		}
-//		//主任务特殊处理
-//		if (!(info.MAIN == info.type()
-//				&& info.last_task_time() + info.polling_time() < current_time)) {
-//			continue;
-//		}
 		if (TASK_SEND_FAILED == info.state()) {
 			task_db_->UpdateRobotTaskState(info.id(), TASK_SEND);
 		} else {
@@ -338,7 +344,7 @@ bool TaskSchdulerManager::DistributionTask() {
 
 		struct TiebaTaskUnit *unit = new TiebaTaskUnit();
 		if (0 == info.cookie().size()
-				&& cookie_cache_->GetCookie(info.TIEBA, cookie)) {
+				&& cookie_cache_->GetCookie(info.type(), cookie)) {
 			unit->cookie_id = cookie.cookie_id();
 			unit->cookie = cookie.get_cookie_body();
 		} else {
@@ -349,7 +355,7 @@ bool TaskSchdulerManager::DistributionTask() {
 		//struct TaskUnit* unit = new struct TaskUnit;
 		unit->task_id = info.id();
 //		unit->task_type = info.type();
-		unit->task_type = info.TIEBA;
+		unit->task_type = info.type();
 		unit->addr = info.addr();
 		unit->ua = info.ua();
 		unit->url = info.url();
@@ -376,8 +382,14 @@ bool TaskSchdulerManager::DistributionTask() {
 			}
 			packet_start = it;
 			net::PacketProsess::ClearTiebaTaskList(&task);
+			// 一次只发一个包
+			break;
 		}
 	}
+	base_logic::TiebaTask::TypeQueue &type_queue = base_logic::TiebaTask::type_queue_;
+	int64 last_type = type_queue.front();
+	type_queue.pop();
+	type_queue.push(last_type);
 
 	//解决余数
 	if (task.task_set.size() > 0) {
@@ -401,7 +413,7 @@ bool TaskSchdulerManager::DistributionTask() {
 		} else if (TASK_SEND == task.state()) {
 			task_cache_->task_exec_map_[task.id()] = task;
 			task_cache_->task_idle_list_.erase(it++);
-		} else if (TASK_SEND_FAILED == task.state()) {
+		} else {
 			++it;
 		}
 	}

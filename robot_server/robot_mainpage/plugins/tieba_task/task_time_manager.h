@@ -7,46 +7,49 @@
 #include "crawler_task_db.h"
 #include "crawler_task_kafka.h"
 #include "task_schduler_engine.h"
-#include "../../pub/share/manager_info.h"
+#include "share/session_engine.h"
 
 #define TIME_DISTRIBUTION_TASK       10000
 #define TIME_FECTCH_TASK             10001
 #define TIME_CLEAN_NO_EFFECTIVE      10005
 #define TIME_RECYCLINGTASK           10006
-#define TIME_FETCH_TEMP_TASK         10007
+#define TIME_FETCH_MAIN_TASK         10007
 #define TIME_DISTRBUTION_TEMP_TASK   10008
-#define TIME_UPDATE_EXEC_TASKS		 10009
+#define TIME_UPDATE_EXEC_TASKS		   10009
+#define TIME_FETCH_IP                10010
 
 namespace tieba_task_logic {
 
 class TaskTimeManager {
  public:
-    explicit TaskTimeManager(tieba_task_logic::CrawlerTaskDB* task_db);
-    virtual ~TaskTimeManager();
+  explicit TaskTimeManager(tieba_task_logic::CrawlerTaskDB* task_db);
+  virtual ~TaskTimeManager();
  public:
-    void TaskTimeEvent(int opcode, int time);
+  void TaskTimeEvent(int opcode, int time);
 
-    CrawlerTaskKafka& GetTaskKafka();
+  CrawlerTaskKafka& GetTaskKafka();
+
+  void SetSessionMgr(plugin_share::SessionManager *session_mgr) {
+    session_mgr_ = session_mgr;
+  }
  private:
-    void TimeFetchTask();
+  void TimeFetchTask();
 
-    void TimeCheckTask();
+  void TimeCheckTask();
 
-    void TimeFechTempTask();
+  void TimeFechMainTask();
 
-    void CleanNoEffectCrawler();
+  void CleanNoEffectCrawler();
 
-    void UpdateExecTasks();
+  void UpdateExecTasks();
 
  private:
-    tieba_task_logic::TaskSchdulerManager*               schduler_mgr_;
-    scoped_ptr<tieba_task_logic::CrawlerTaskDB>          task_db_;
-    CrawlerTaskKafka									   task_kafka_;
-    plugin_share::ManagerInfo 							   *manager_info_;
+  tieba_task_logic::TaskSchdulerManager* schduler_mgr_;
+  scoped_ptr<tieba_task_logic::CrawlerTaskDB> task_db_;
+  CrawlerTaskKafka task_kafka_;
+  plugin_share::SessionManager *session_mgr_;
 };
 
 }  //  namespace crawler_task_logic
-
-
 
 #endif /* TASK_TIME_MANAGER_H_ */

@@ -3,44 +3,40 @@
 #include <stdio.h>
 #include <zlib.h>
 
-int main(int argc, char* argv[])
-{
-	char text[] = "zlib compress and uncompress test qwuiehquiyrqiuy qwyeriquyr qwiueyiqyeiq qwiueyiqye\n";
-	uLong tlen = strlen(text) + 1;	/* ÐèÒª°Ñ×Ö·û´®µÄ½áÊø·û'\0'Ò²Ò»²¢´¦Àí */
-	char* buf = NULL;
-	uLong blen;
-    printf("tlen : %d\n", tlen);
-	/* ¼ÆËã»º³åÇø´óÐ¡£¬²¢ÎªÆä·ÖÅäÄÚ´æ */
-	blen = compressBound(tlen);	/* Ñ¹ËõºóµÄ³¤¶ÈÊÇ²»»á³¬¹ýblenµÄ */
-	if((buf = (char*)malloc(sizeof(char) * blen)) == NULL)
-	{
-		printf("no enough memory!\n");
-		return -1;
-	}
+int main(int argc, char* argv[]) {
+  char text[] =
+      "zlib compress and uncompress test qwuiehquiyrqiuy qwyeriquyr qwiueyiqyeiq qwiueyiqye\n";
+  uLong tlen = strlen(text) + 1; /* ï¿½ï¿½Òªï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½Ä½ï¿½ï¿½ï¿½ï¿½ï¿½'\0'Ò²Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
+  char* buf = NULL;
+  uLong blen;
+  printf("tlen : %d\n", tlen);
+  /* ï¿½ï¿½ï¿½ã»ºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½ */
+  blen = compressBound(tlen); /* Ñ¹ï¿½ï¿½ï¿½ï¿½Ä³ï¿½ï¿½ï¿½ï¿½Ç²ï¿½ï¿½á³¬ï¿½ï¿½blenï¿½ï¿½ */
+  if ((buf = (char*) malloc(sizeof(char) * blen)) == NULL) {
+    printf("no enough memory!\n");
+    return -1;
+  }
 
-	/* Ñ¹Ëõ */
-	if(compress((Bytef*)buf, &blen, (const Bytef*)text, tlen) != Z_OK)
-	{
-		printf("compress failed!\n");
-		return -1;
-	}
-	printf("blen : %d\n", blen);
-	printf("compress : %s\n", buf);
+  /* Ñ¹ï¿½ï¿½ */
+  if (compress((Bytef*) buf, &blen, (const Bytef*) text, tlen) != Z_OK) {
+    printf("compress failed!\n");
+    return -1;
+  }
+  printf("blen : %d\n", blen);
+  printf("compress : %s\n", buf);
 
-	/* ½âÑ¹Ëõ */
-	if(uncompress((Bytef*)text, &tlen, (const Bytef*)buf, blen) != Z_OK)
-	{
-		printf("uncompress failed!\n");
-		return -1;
-	}
+  /* ï¿½ï¿½Ñ¹ï¿½ï¿½ */
+  if (uncompress((Bytef*) text, &tlen, (const Bytef*) buf, blen) != Z_OK) {
+    printf("uncompress failed!\n");
+    return -1;
+  }
 
-	/* ´òÓ¡½á¹û£¬²¢ÊÍ·ÅÄÚ´æ */
-	printf("%s", text);
-	if(buf != NULL)
-	{
-		free(buf);
-		buf = NULL;
-	}
+  /* ï¿½ï¿½Ó¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½Ú´ï¿½ */
+  printf("%s", text);
+  if (buf != NULL) {
+    free(buf);
+    buf = NULL;
+  }
 
-	return 0;
+  return 0;
 }

@@ -15,20 +15,18 @@ namespace manager_logic {
 
 class ManagerDB {
  public:
-    ManagerDB();
-    virtual ~ManagerDB();
+  ManagerDB();
+  virtual ~ManagerDB();
  public:
-    bool CrawlerManagerLogin(void* data);
+  bool CrawlerManagerLogin(void* data);
 
  public:
-    static void CallBackManagerLogin(void* param,
-            base_logic::Value* value);
+  static void CallBackManagerLogin(void* param, base_logic::Value* value);
 
  private:
-    scoped_ptr<base_logic::DataControllerEngine> mysql_engine_;
+  scoped_ptr<base_logic::DataControllerEngine> mysql_engine_;
 };
 
 }  // namespace manager_logic
-
 
 #endif /* MANAGER_DB_H_ */

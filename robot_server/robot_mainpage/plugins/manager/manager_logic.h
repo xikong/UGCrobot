@@ -3,87 +3,89 @@
 #ifndef KID_MANAGER_MANAGER_LOGIC_
 #define KID_MANAGER_MANAGER_LOGIC_
 #include "core/common.h"
-#include "manager/manager_db.h"
 #include "basic/basictypes.h"
 #include "net/comm_head.h"
 #include "net/packet_processing.h"
-#include <pthread.h>
-#include "../../pub/share/manager_info.h"
+#include "manager_db.h"
+#include "share/session_engine.h"
 
 namespace manager_logic {
 class Managerlogic {
-public:
-	Managerlogic();
-	virtual ~Managerlogic();
+ public:
+  Managerlogic();
+  virtual ~Managerlogic();
 
-private:
-	static Managerlogic *instance_;
+ private:
+  static Managerlogic *instance_;
 
-public:
-	static Managerlogic *GetInstance();
-	static void FreeInstance();
-	bool OnManagerConnect(struct server *srv, const int socket);
+ public:
+  static Managerlogic *GetInstance();
+  static void FreeInstance();
+  bool OnManagerConnect(struct server *srv, const int socket);
 
-	bool OnManagerMessage(struct server *srv, const int socket, const void *msg,
-			const int len);
+  bool OnManagerMessage(struct server *srv, const int socket, const void *msg,
+                        const int len);
 
-	bool OnManagerClose(struct server *srv, const int socket);
+  bool OnManagerClose(struct server *srv, const int socket);
 
-	bool OnBroadcastConnect(struct server *srv, const int socket,
-			const void *data, const int len);
+  bool OnBroadcastConnect(struct server *srv, const int socket,
+                          const void *data, const int len);
 
-	bool OnBroadcastMessage(struct server *srv, const int socket,
-			const void *msg, const int len);
+  bool OnBroadcastMessage(struct server *srv, const int socket, const void *msg,
+                          const int len);
 
-	bool OnBroadcastClose(struct server *srv, const int socket);
+  bool OnBroadcastClose(struct server *srv, const int socket);
 
-	bool OnIniTimer(struct server *srv);
+  bool OnIniTimer(struct server *srv);
 
-	bool OnTimeout(struct server *srv, char* id, int opcode, int time);
+  bool OnTimeout(struct server *srv, char* id, int opcode, int time);
 
-private:
-	bool OnSelfRegState(struct server* srv, int socket,
-			struct PacketHead *packet, const void *msg = NULL, int32 len = 0);
+ private:
+  bool OnSelfRegState(struct server* srv, int socket, struct PacketHead *packet,
+                      const void *msg = NULL, int32 len = 0);
 
-	bool OnRouterReg(struct server* srv, int socket, struct PacketHead *packet,
-			const void *msg = NULL, int32 len = 0);
+  bool OnRouterReg(struct server* srv, int socket, struct PacketHead *packet,
+                   const void *msg = NULL, int32 len = 0);
 
-	bool OnRouterRegState(struct server* srv, int socket,
-			struct PacketHead *packet, const void *msg = NULL, int32 len = 0);
+  bool OnRouterRegState(struct server* srv, int socket,
+                        struct PacketHead *packet, const void *msg = NULL,
+                        int32 len = 0);
 
-	bool OnGetMachineHardInfo(struct server* srv, int socket,
-			struct PacketHead* packet, const void *msg = NULL, int32 len = 0);
+  bool OnGetMachineHardInfo(struct server* srv, int socket,
+                            struct PacketHead* packet, const void *msg = NULL,
+                            int32 len = 0);
 
-	bool OnCrawlerAvailableResourceNum(struct server* srv, int socket,
-			struct PacketHead* packet, const void *msg = NULL, int32 len = 0);
+  bool OnCrawlerAvailableResourceNum(struct server* srv, int socket,
+                                     struct PacketHead* packet,
+                                     const void *msg = NULL, int32 len = 0);
 
-	template<typename SCHDULERTYPE>
-	bool OnTemplateReg(const char* mac, const char* password, const int socket,
-			const int32 type, const int64 session_id);
+  template<typename SCHDULERTYPE>
+  bool OnTemplateReg(const char* mac, const char* password, const int socket,
+                     const int32 type, const int64 session_id);
 
-	bool OnCheckHeartPacket(struct server* srv, int socket,
-			struct PacketHead *packet, const void *msg = NULL, int32 len = 0);
+  bool OnCheckHeartPacket(struct server* srv, int socket,
+                          struct PacketHead *packet, const void *msg = NULL,
+                          int32 len = 0);
 
-	bool HandleAllConnect(const char *func, struct server *srv, const int socket);
+  bool HandleAllConnect(const char *func, struct server *srv, const int socket);
 
-	bool HandleAllMessage(const char *func, struct server *srv, const int socket, const void *msg,
-			const int len);
+  bool HandleAllMessage(const char *func, struct server *srv, const int socket,
+                        const void *msg, const int len);
 
-	bool HandleAllClose(const char *func, struct server *srv, const int socket);
-private:
-	bool Init();
-	bool Startup();
+  bool HandleAllClose(const char *func, struct server *srv, const int socket);
+ private:
+  bool Init();
+  bool Startup();
 
-	bool RegSelf();
-	int BuildSlbSession();
-	void CloseSlbSession(int socket);
-	bool SendHeart();
-	bool SendSelfState();
+  bool RegSelf();
+  bool SendHeart();
+  bool CheckIsRegistered();
+  bool SendSelfState();
 
-	uint16 server_type_;
-	bool  need_reg_self_;
-	plugin_share::ManagerInfo *data_;
-	config::FileConfig* config_;
+  uint16 server_type_;
+  bool need_reg_self_;
+  plugin_share::SessionManager* session_mgr_;
+  config::FileConfig* config_;
 };
 }  // namespace manager_logic
 

@@ -1,10 +1,6 @@
 #ifndef _MAIN_H_
 #define _MAIN_H_
 
-
-
-
-
 #include <activemq/library/ActiveMQCPP.h>
 #include <decaf/lang/Thread.h>
 #include <decaf/lang/Runnable.h>
@@ -27,7 +23,6 @@
 #include <memory>
 #include <list>
 
-
 namespace activemq {
 using namespace activemq::core;
 using namespace decaf::util::concurrent;
@@ -36,89 +31,88 @@ using namespace decaf::lang;
 using namespace cms;
 using namespace std;
 
-
 //假设传输的消息格式
 typedef struct _CrawlerInfo {
-	int taskId;
-	std::string URL;
-	int maxDepth;
-	int curDepth;
-}CrawlerInfo;
-
+  int taskId;
+  std::string URL;
+  int maxDepth;
+  int curDepth;
+} CrawlerInfo;
 
 //定义传输消息对象--用于包装消息
 class CrawlerInfoProducer : public Runnable {
-private:
+ private:
 
-    Connection* connection;
-    Session* session;
-    Destination* destination;
-    MessageProducer* producer;
-    int numMessages;
-    bool useTopic;
-    bool sessionTransacted;
-    std::string brokerURI; 
-    CrawlerInfo* crawlerInfo;
+  Connection* connection;
+  Session* session;
+  Destination* destination;
+  MessageProducer* producer;
+  int numMessages;
+  bool useTopic;
+  bool sessionTransacted;
+  std::string brokerURI;
+  CrawlerInfo* crawlerInfo;
 
-private:
+ private:
 
-    CrawlerInfoProducer(const CrawlerInfoProducer&);
-    CrawlerInfoProducer& operator=(const CrawlerInfoProducer&);
+  CrawlerInfoProducer(const CrawlerInfoProducer&);
+  CrawlerInfoProducer& operator=(const CrawlerInfoProducer&);
 
-public:
-    CrawlerInfoProducer(const std::string& brokerURI, int numMessages, bool useTopic = false, bool sessionTransacted = false) :
-        connection(NULL),
+ public:
+  CrawlerInfoProducer(const std::string& brokerURI, int numMessages,
+                      bool useTopic = false, bool sessionTransacted = false)
+      : connection(NULL),
         session(NULL),
         destination(NULL),
         producer(NULL),
         numMessages(numMessages),
-        useTopic(useTopic),		
+        useTopic(useTopic),
         sessionTransacted(sessionTransacted),
         brokerURI(brokerURI) {
-	crawlerInfo = new CrawlerInfo();
-    }
+    crawlerInfo = new CrawlerInfo();
+  }
 
-    virtual ~CrawlerInfoProducer();
+  virtual ~CrawlerInfoProducer();
 
-    void close();
+  void close();
 
-    void setCrawlerInfo(CrawlerInfo* tmp);
+  void setCrawlerInfo(CrawlerInfo* tmp);
 
-    virtual void run();
+  virtual void run();
 
-private:
-	//析构
-    void cleanup();
+ private:
+  //析构
+  void cleanup();
 };
 
-
 //创建消费者，用于接收服务端消息
-class CrawlerInfoConsumer : public ExceptionListener,
-							public MessageListener,
-							public Runnable {
+class CrawlerInfoConsumer : public ExceptionListener, public MessageListener,
+    public Runnable {
 
-private:
+ private:
 
-    CountDownLatch latch;
-    CountDownLatch doneLatch;
-    Connection* connection;
-    Session* session;
-    Destination* destination;
-    MessageConsumer* consumer;
-    long waitMillis;
-    bool useTopic;
-    bool sessionTransacted;
-    std::string brokerURI;
+  CountDownLatch latch;
+  CountDownLatch doneLatch;
+  Connection* connection;
+  Session* session;
+  Destination* destination;
+  MessageConsumer* consumer;
+  long waitMillis;
+  bool useTopic;
+  bool sessionTransacted;
+  std::string brokerURI;
 
-private:
+ private:
 
-    CrawlerInfoConsumer(const CrawlerInfoConsumer&);
-    CrawlerInfoConsumer& operator=(const CrawlerInfoConsumer&);
+  CrawlerInfoConsumer(const CrawlerInfoConsumer&);
+  CrawlerInfoConsumer& operator=(const CrawlerInfoConsumer&);
 
-public:
-    CrawlerInfo* crawlerInfoReceiver;
-    CrawlerInfoConsumer(const std::string& brokerURI, int numMessages, bool useTopic = false, bool sessionTransacted = false, int waitMillis = 2000) :
-        latch(1),
+ public:
+  CrawlerInfo* crawlerInfoReceiver;
+  CrawlerInfoConsumer(const std::string& brokerURI, int numMessages,
+                      bool useTopic = false, bool sessionTransacted = false,
+                      int waitMillis = 2000)
+      : latch(1),
         doneLatch(numMessages),
         connection(NULL),
         session(NULL),
@@ -128,50 +122,39 @@ public:
         useTopic(useTopic),
         sessionTransacted(sessionTransacted),
         brokerURI(brokerURI) {
-    }
+  }
 
-    virtual ~CrawlerInfoConsumer();
+  virtual ~CrawlerInfoConsumer();
 
-    void close();
+  void close();
 
-    void waitUntilReady();
+  void waitUntilReady();
 
-    virtual void run();
+  virtual void run();
 
-    // 在该类注册信息监听时调用
-    virtual void onMessage(const Message* message);
+  // 在该类注册信息监听时调用
+  virtual void onMessage(const Message* message);
 
-    // 继承异常监听类，监听异常
-    virtual void onException(const CMSException& ex AMQCPP_UNUSED);
+  // 继承异常监听类，监听异常
+  virtual void onException(const CMSException& ex AMQCPP_UNUSED);
 
-private:
-    void cleanup();
+ private:
+  void cleanup();
 };
-
-
 
 //包装需要发送的信息，定义实际传输消息逻辑
 void SendSingleInfo(CrawlerInfo* infoNeedSent);
 
-
 //接收服务器消息，定义实际接收逻辑
 CrawlerInfo RecvSingleInfo();
-
-
 
 //定义队列发送接口
 void SendListInfo(list<CrawlerInfo*> listInfo);
 
-
-
 //定义接收消息队列接口
 list<CrawlerInfo> RecvListInfo(int size);
 
-} //namespace -- activemq
+}  //namespace -- activemq
 
 #endif
 
-
-
-		
-	

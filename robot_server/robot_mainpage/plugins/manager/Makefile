@@ -112,6 +112,9 @@ packet_processing.o :  $(USER_DIR)/net/packet_processing.cc $(USER_DIR)/net/pack
 logic_unit.o :  $(USER_DIR)/logic/logic_unit.cc $(USER_DIR)/logic/logic_unit.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/logic_unit.cc $(INCLUDE_PATHS)
 		
+session_engine.o :  $(USER_DIR)/share/session_engine.cc $(USER_DIR)/share/session_engine.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/share/session_engine.cc $(INCLUDE_PATHS)
+
 mig_log.o: $(THIRD_PATH)/log/mig_log.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(THIRD_PATH)/log/mig_log.cc $(INCLUDE_PATHS)
 
@@ -146,7 +149,7 @@ zip.o:$(LIB_DIR)/public/basic/zip.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(LIB_DIR)/public/basic/zip.cc $(INCLUDE_PATHS)
 	
 
-$(PLUGIN) : manager_init.o  manager_logic.o manager_db.o packet_processing.o logic_unit.o\
+$(PLUGIN) : manager_init.o  manager_logic.o manager_db.o packet_processing.o logic_unit.o session_engine.o\
 	auto_crawler_infos.o mem_controller.o mysql_controller.o redis_controller.o storage_controller_engine.o\
 	mig_log.o basictypes.o basic_util.o config.o md5sum.o radom_in.o data_packet.o native_library.o tea.o unzip.o zip.o\
 	$(CUSTOM_THIRD_PATH)/dmg_fp/lib/dmg_fp.a $(LIB_DIR)/base/lib/mybase.a $(LIB_DIR)/lib/libhiredis.a

@@ -86,6 +86,9 @@ clean :
 crawler_task_init.o : ./crawler_task_init.cc ./crawler_task_init.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./crawler_task_init.cc $(INCLUDE_PATHS)
 
+robot_config.o : ./robot_config.cc ./robot_config.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_config.cc $(INCLUDE_PATHS)
+
 crawler_task_logic.o : ./crawler_task_logic.cc ./crawler_task_logic.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./crawler_task_logic.cc $(INCLUDE_PATHS)
 
@@ -122,6 +125,9 @@ packet_processing.o :  $(USER_DIR)/net/packet_processing.cc $(USER_DIR)/net/pack
 logic_unit.o :  $(USER_DIR)/logic/logic_unit.cc $(USER_DIR)/logic/logic_unit.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/logic/logic_unit.cc $(INCLUDE_PATHS)
 		
+session_engine.o :  $(USER_DIR)/share/session_engine.cc $(USER_DIR)/share/session_engine.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/share/session_engine.cc $(INCLUDE_PATHS)
+
 mig_log.o: $(THIRD_PATH)/log/mig_log.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(THIRD_PATH)/log/mig_log.cc $(INCLUDE_PATHS)
 
@@ -156,7 +162,7 @@ zip.o:$(LIB_DIR)/public/basic/zip.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(LIB_DIR)/public/basic/zip.cc $(INCLUDE_PATHS)
 	
 
-$(PLUGIN) : crawler_task_init.o  crawler_task_logic.o crawler_task_db.o crawler_task_kafka.o task_schduler_engine.o task_time_manager.o\
+$(PLUGIN) : crawler_task_init.o robot_config.o  crawler_task_logic.o crawler_task_db.o crawler_task_kafka.o task_schduler_engine.o task_time_manager.o session_engine.o\
 	packet_processing.o logic_unit.o auto_crawler_infos.o mem_controller.o mysql_controller.o\
 	redis_controller.o storage_controller_engine.o\
 	mig_log.o basictypes.o basic_util.o config.o md5sum.o radom_in.o data_packet.o native_library.o tea.o unzip.o zip.o\
