@@ -6,10 +6,17 @@
 #include <list>
 #include <sstream>
 
-#include "../../../library/public/basic/basic_util.h"
-#include "../net/comm_head.h"
+#include "basic/basic_util.h"
+#include "net/comm_head.h"
 
 namespace base_logic {
+
+SysRadom RobotTask::random;
+int RobotTask::factor = 1800;
+int RobotTask::begin_hour = 7;
+int RobotTask::begin_min = 30;
+int RobotTask::end_hour = 23;
+int RobotTask::end_min = 30;
 
 time_t TiebaTask::next_exec_time = 0;
 int TiebaTask::TICK = 0;

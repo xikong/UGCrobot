@@ -24,6 +24,38 @@ CrawlerTaskDB::CrawlerTaskDB() {
 CrawlerTaskDB::~CrawlerTaskDB() {
 }
 
+bool CrawlerTaskDB::FetchLastExecTime(int64 attr_id, int64 &result) {
+  bool r = false;
+  scoped_ptr<base_logic::DictionaryValue> dict(
+      new base_logic::DictionaryValue());
+  std::stringstream os;
+  os << "call proc_FetchLastExecTime(" << attr_id << ")";
+  std::string sql = os.str();
+  base_logic::ListValue* listvalue;
+  dict->SetString(L"sql", sql);
+  r = mysql_engine_->ReadData(0, (base_logic::Value*) (dict.get()),
+                              CallBackFetchLastExecTime);
+  if (!r)
+    return r;
+  dict->GetBigInteger(L"last_exec_time", &result);
+  return true;
+}
+
+void CrawlerTaskDB::CallBackFetchLastExecTime(void* param,
+                                                 base_logic::Value* value) {
+  base_logic::DictionaryValue* dict = (base_logic::DictionaryValue*) (value);
+  base_storage::DBStorageEngine* engine =
+      (base_storage::DBStorageEngine*) (param);
+  MYSQL_ROW rows;
+  int32 num = engine->RecordCount();
+  if (num > 0) {
+    if (rows = (*(MYSQL_ROW*) (engine->FetchRows())->proc)) {
+      if (rows[0] != NULL)
+        dict->SetBigInteger(L"last_exec_time", atoll(rows[0]));
+    }
+  }
+}
+
 bool CrawlerTaskDB::UpdateCookie(int64 cookie_id, int is_valid) {
   bool r = false;
   scoped_ptr<base_logic::DictionaryValue> dict(

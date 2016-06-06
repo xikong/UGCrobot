@@ -10,6 +10,7 @@
 #include "basic/basictypes.h"
 #include "logic/base_values.h"
 #include "logic/logic_comm.h"
+#include "basic/radom_in.h"
 
 struct RobotTaskBase;
 struct RouterStatus;
@@ -518,7 +519,7 @@ public:
 
    static inline bool cmp(const LoginCookie& t_login_cookie,
            const LoginCookie& r_login_cookie) {
-       return t_login_cookie.send_last_time() < r_login_cookie.send_last_time();
+       return t_login_cookie.last_use_time() < r_login_cookie.last_use_time();
    }
 
    void ValueSerialization(base_logic::DictionaryValue* dict);
@@ -643,6 +644,8 @@ private:
 	WrapData<T> *p_;
 };
 
+using base::SysRadom;
+
 class RobotTask {
 public:
 	enum TaskType {
@@ -664,6 +667,11 @@ public:
 		, create_time_(time(NULL))
 		, send_time_(0) {}
 
+	virtual ~RobotTask() {
+
+	}
+
+public:
 	virtual void GetTaskId(base_logic::DictionaryValue* dict);
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
 	virtual void GetDataFromDb(base_logic::DictionaryValue* dict);
@@ -672,6 +680,29 @@ public:
 	virtual std::string SerializeSelf();
 	virtual bool IsValid() const { return true; }
 	virtual bool IsReady(const time_t current_time) const { return false; };
+	virtual void UpdateNextExecTime() = 0;
+
+	static time_t MakeTime(int hour, int min) {
+    time_t now = time(NULL);
+    struct tm *ptm = localtime(&now);
+    ptm->tm_hour = hour;
+    ptm->tm_min = min;
+    return mktime(ptm);
+	}
+	static time_t BeginTime() {
+	  return MakeTime(begin_hour, begin_min);
+	}
+	static time_t EndTime() {
+	  return MakeTime(end_hour, end_min);
+	}
+
+	static bool IsInWorkTime(time_t t) {
+	  struct tm *ptm = localtime(&t);
+	  int task_time = ptm->tm_hour * 100 + ptm->tm_min;
+	  int begin_time = begin_hour * 100 + begin_min;
+	  int end_time = end_hour * 100 + end_min;
+	  return task_time >= begin_time && task_time <= end_time;
+	}
 
 	void set_id(int64 id) {id_ = id;}
 	int64 id() const {return id_;}
@@ -698,10 +729,16 @@ public:
 	base_logic::RobotTaskContent content() const { return content_; }
 
 public:
-	static const int TTL = 3600;
+  static SysRadom random;
+  static int factor;
+  static int begin_hour;
+  static int begin_min;
+  static int end_hour;
+  static int end_min;
+  static const int TTL = 86400;
 protected:
 	int64		id_;		//任务 id
-	TaskType	type_;
+	TaskType  type_;
 	std::string url_;
 	TaskState	state_;
 	time_t		create_time_;
@@ -722,10 +759,15 @@ public:
 	virtual bool IsReady(const time_t current_time) const {
 		if (current_time < next_exec_time)
 			return false;
-		next_exec_time = current_time + TICK;
-		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
 		return true;
 	};
+  virtual void UpdateNextExecTime() {
+    next_exec_time = time(NULL) + TICK + random.GetRandomIntID() % factor;
+    while (!IsInWorkTime(next_exec_time)) {
+      next_exec_time += TICK + random.GetRandomIntID() % factor;
+    }
+    LOG_DEBUG2("weibo next_exec_time = %lld", next_exec_time);
+  }
 public:
 	void set_topic_id(const std::string &topic_id) {topic_id_ = topic_id;}
 	std::string topic_id() const {return topic_id_;}
@@ -733,6 +775,10 @@ public:
 	std::string host_uin() const {return host_uin_;}
 
 	static void set_tick(int tick) { TICK = tick; }
+  static void set_next_exec_time(time_t last_exec_time) {
+    next_exec_time = last_exec_time + TICK;
+  }
+  static time_t next_time() { return next_exec_time; }
 private:
 	static time_t 	next_exec_time;
 	static int		TICK;
@@ -750,13 +796,18 @@ public:
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual void SetTaskPacketUnit(RobotTaskBase *task);
 	virtual std::string SerializeSelf();
-	virtual bool IsReady(const time_t current_time) const {
-		if (current_time < next_exec_time)
-			return false;
-		next_exec_time = current_time + TICK;
-		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
-		return true;
-	};
+  virtual bool IsReady(const time_t current_time) const {
+    if (current_time < next_exec_time)
+      return false;
+    return true;
+  };
+  virtual void UpdateNextExecTime() {
+    next_exec_time = time(NULL) + TICK + random.GetRandomIntID() % factor;
+    while (!IsInWorkTime(next_exec_time)) {
+      next_exec_time += TICK + random.GetRandomIntID() % factor;
+    }
+    LOG_DEBUG2("tianya next_exec_time = %lld", next_exec_time);
+  }
 
 public:
 	void set_post_time(int64 post_time) {post_time_ = post_time;}
@@ -772,6 +823,9 @@ public:
 //	void set_content(const std::string &content) {content_ = content;}
 //	std::string content() const {return content_;}
 	static void set_tick(int tick) { TICK = tick; }
+  static void set_next_exec_time(time_t last_exec_time) {
+    next_exec_time = last_exec_time + TICK; }
+  static time_t next_time() { return next_exec_time; }
 private:
 	static time_t 	next_exec_time;
 	static int		TICK;
@@ -792,13 +846,17 @@ public:
 	virtual void SetTaskPacketUnit(RobotTaskBase *task);
 	virtual std::string SerializeSelf();
 	virtual bool IsValid() const { return !repost_id_.empty(); }
-	virtual bool IsReady(const time_t current_time) const {
-		if (current_time < next_exec_time)
-			return false;
-		next_exec_time = current_time + TICK;
-		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
-		return true;
-	};
+  virtual bool IsReady(const time_t current_time) const {
+    if (current_time < next_exec_time)
+      return false;
+    return true;
+  };
+  virtual void UpdateNextExecTime() {
+    next_exec_time = time(NULL) + TICK + random.GetRandomIntID() % factor;
+    while (!IsInWorkTime(next_exec_time)) {
+      next_exec_time += TICK + random.GetRandomIntID() % factor;
+    }    LOG_DEBUG2("tieba next_exec_time = %lld", next_exec_time);
+  }
 
 public:
 //	void set_addr(const std::string &addr) {addr_ = addr;}
@@ -826,6 +884,9 @@ public:
 	std::string repost_id() const {return repost_id_;}
 
 	static void set_tick(int tick) { TICK = tick; }
+  static void set_next_exec_time(time_t last_exec_time) {
+    next_exec_time = last_exec_time + TICK; }
+  static time_t next_time() { return next_exec_time; }
 private:
 	static time_t 	next_exec_time;
 	static int		TICK;
@@ -844,13 +905,18 @@ public:
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual std::string SerializeSelf();
-	virtual bool IsReady(const time_t current_time) const {
-		if (current_time < next_exec_time)
-			return false;
-		next_exec_time = current_time + TICK;
-		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
-		return true;
-	};
+  virtual bool IsReady(const time_t current_time) const {
+    if (current_time < next_exec_time)
+      return false;
+    return true;
+  };
+  virtual void UpdateNextExecTime() {
+    next_exec_time = time(NULL) + TICK + random.GetRandomIntID() % factor;
+    while (!IsInWorkTime(next_exec_time)) {
+      next_exec_time += TICK + random.GetRandomIntID() % factor;
+    }
+    LOG_DEBUG2("qzone next_exec_time = %lld", next_exec_time);
+  }
 public:
 //	void set_addr(const std::string &addr) {addr_ = addr;}
 //	std::string addr() const {return addr_;}
@@ -861,6 +927,9 @@ public:
 //	void set_content(const std::string &content) {content_ = content;}
 //	std::string content() const {return content_;}
 	static void set_tick(int tick) { TICK = tick; }
+  static void set_next_exec_time(time_t last_exec_time) {
+    next_exec_time = last_exec_time + TICK; }
+  static time_t next_time() { return next_exec_time; }
 private:
 	static time_t 	next_exec_time;
 	static int		TICK;
@@ -879,17 +948,25 @@ public:
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual void SetTaskPacketUnit(RobotTaskBase *task);
 	virtual std::string SerializeSelf();
-	virtual bool IsReady(const time_t current_time) const {
-		if (current_time < next_exec_time)
-			return false;
-		next_exec_time = current_time + TICK;
-		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
-		return true;
-	};
+  virtual bool IsReady(const time_t current_time) const {
+    if (current_time < next_exec_time)
+      return false;
+    return true;
+  };
+  virtual void UpdateNextExecTime() {
+    next_exec_time = time(NULL) + TICK + random.GetRandomIntID() % factor;
+    while (!IsInWorkTime(next_exec_time)) {
+      next_exec_time += TICK + random.GetRandomIntID() % factor;
+    }
+    LOG_DEBUG2("taoguba next_exec_time = %lld", next_exec_time);
+  }
 
 	std::string topic_id() const {return topic_id_;}
 	std::string subject() const {return subject_;}
 	static void set_tick(int tick) { TICK = tick; }
+  static void set_next_exec_time(time_t last_exec_time) {
+    next_exec_time = last_exec_time + TICK; }
+  static time_t next_time() { return next_exec_time; }
 private:
 	static time_t 	next_exec_time;
 	static int		TICK;
@@ -904,13 +981,18 @@ public:
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual std::string SerializeSelf();
-	virtual bool IsReady(const time_t current_time) const {
-		if (current_time < next_exec_time)
-			return false;
-		next_exec_time = current_time + TICK;
-		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
-		return true;
-	};
+  virtual bool IsReady(const time_t current_time) const {
+    if (current_time < next_exec_time)
+      return false;
+    return true;
+  };
+  virtual void UpdateNextExecTime() {
+    next_exec_time = time(NULL) + TICK + random.GetRandomIntID() % factor;
+    while (!IsInWorkTime(next_exec_time)) {
+      next_exec_time += TICK + random.GetRandomIntID() % factor;
+    }
+    LOG_DEBUG2("maopu next_exec_time = %lld", next_exec_time);
+  }
 public:
 	void set_cat_id(const std::string &cat_id) { cat_id_ = cat_id; }
 	std::string cat_id() const { return cat_id_; }
@@ -925,6 +1007,9 @@ public:
 	std::string currformid() const { return currformid_; }
 
 	static void set_tick(int tick) { TICK = tick; }
+  static void set_next_exec_time(time_t last_exec_time) {
+    next_exec_time = last_exec_time + TICK; }
+  static time_t next_time() { return next_exec_time; }
 private:
 	static time_t 	next_exec_time;
 	static int		TICK;
@@ -941,14 +1026,22 @@ public:
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual std::string SerializeSelf();
-	virtual bool IsReady(const time_t current_time) const {
-		if (current_time < next_exec_time)
-			return false;
-		next_exec_time = current_time + TICK;
-		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
-		return true;
-	};
+  virtual bool IsReady(const time_t current_time) const {
+    if (current_time < next_exec_time)
+      return false;
+    return true;
+  };
+  virtual void UpdateNextExecTime() {
+    next_exec_time = time(NULL) + TICK + random.GetRandomIntID() % factor;
+    while (!IsInWorkTime(next_exec_time)) {
+      next_exec_time += TICK + random.GetRandomIntID() % factor;
+    }
+    LOG_DEBUG2("douban next_exec_time = %lld", next_exec_time);
+  }
 	static void set_tick(int tick) { TICK = tick; }
+	static void set_next_exec_time(time_t last_exec_time) {
+	  next_exec_time = last_exec_time + TICK; }
+	static time_t next_time() { return next_exec_time; }
 private:
 	static time_t 	next_exec_time;
 	static int		TICK;
@@ -960,17 +1053,25 @@ public:
 	virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
 	virtual RobotTaskBase* CreateTaskPacketUnit();
 	virtual std::string SerializeSelf();
-	virtual bool IsReady(const time_t current_time) const {
-		if (current_time < next_exec_time)
-			return false;
-		next_exec_time = current_time + TICK;
-		LOG_DEBUG2("tieba task is ready, next_exec_time = %lld", next_exec_time);
-		return true;
-	};
+  virtual bool IsReady(const time_t current_time) const {
+    if (current_time < next_exec_time)
+      return false;
+    return true;
+  };
+  virtual void UpdateNextExecTime() {
+    next_exec_time = time(NULL) + TICK + random.GetRandomIntID() % factor;
+    while (!IsInWorkTime(next_exec_time)) {
+      next_exec_time += TICK + random.GetRandomIntID() % factor;
+    }
+    LOG_DEBUG2("snowball next_exec_time = %lld", next_exec_time);
+  }
 public:
 	void set_topic_id(const std::string topic_id) { topic_id_ = topic_id; }
 	std::string topic_id() const { return topic_id_; }
 	static void set_tick(int tick) { TICK = tick; }
+  static void set_next_exec_time(time_t last_exec_time) {
+    next_exec_time = last_exec_time + TICK; }
+  static time_t next_time() { return next_exec_time; }
 private:
 	static time_t 	next_exec_time;
 	static int		TICK;

@@ -16,10 +16,9 @@
 #include "crawler_task_logic.h"
 #include "task_schduler_engine.h"
 #include "cookie_engine.h"
+#include "robot_config.h"
 
 #define DEFAULT_CONFIG_PATH     "./plugins/robot_task/robot_task_config.xml"
-#define ROBOT_CONFIG_FILE		"./config"
-#define MAX_BUFFER_SIZE			4096
 
 #define TIMER_SERVER_STARTUP	10002
 
@@ -28,7 +27,8 @@ namespace robot_task_logic {
 CrawlerTasklogic* CrawlerTasklogic::instance_ = NULL;
 
 CrawlerTasklogic::CrawlerTasklogic()
-    : manager_info_(NULL) {
+    : manager_info_(NULL),
+      config_(NULL) {
   if (!Init())
     assert(0);
 }
@@ -36,104 +36,43 @@ CrawlerTasklogic::CrawlerTasklogic()
 CrawlerTasklogic::~CrawlerTasklogic() {
 }
 
-void Config::Deserialize(base_logic::DictionaryValue *dict) {
-  int64 tmp;
-
-#define WSTRING(x)		L ## x
-#define SET_VALUE(x)								\
-		dict->GetBigInteger(WSTRING(#x), &tmp);		\
-		dict->HasKey(WSTRING(#x)) && (x = tmp)
-
-  SET_VALUE(assign_task_tick);
-  SET_VALUE(fetch_task_tick);
-  SET_VALUE(recycle_task_tick);
-  SET_VALUE(clean_no_effective_client_tick);
-  SET_VALUE(fetch_ip_tick);
-  SET_VALUE(flush_cookie_use_time_tick);
-  SET_VALUE(fetch_content_tick);
-  SET_VALUE(fetch_cookies_tick);
-  SET_VALUE(tieba_tick);
-  SET_VALUE(weibo_tick);
-  SET_VALUE(tianya_tick);
-  SET_VALUE(qzone_tick);
-  SET_VALUE(maopu_tick);
-  SET_VALUE(douban_tick);
-  SET_VALUE(taoguba_tick);
-  SET_VALUE(snowball_tick);
-  SET_VALUE(cookie_use_tick);
-}
-
-void Config::Print() const {
-  std::stringstream os;
-  os << "\n--------------------- Config Begin ---------------------"
-     << std::endl;
-#define PRINT(v) \
-	os << '\t' << #v << " = " << v << std::endl
-  PRINT(assign_task_tick);
-  PRINT(fetch_task_tick);
-  PRINT(recycle_task_tick);
-  PRINT(clean_no_effective_client_tick);
-  PRINT(fetch_ip_tick);
-  PRINT(flush_cookie_use_time_tick);
-  PRINT(fetch_content_tick);
-  PRINT(cookie_use_tick);
-  PRINT(fetch_cookies_tick);
-  PRINT(tieba_tick);
-  PRINT(weibo_tick);
-  PRINT(tianya_tick);
-  PRINT(qzone_tick);
-  PRINT(maopu_tick);
-  PRINT(douban_tick);
-  PRINT(taoguba_tick);
-  PRINT(snowball_tick);
-  os << "--------------------- Config End  ---------------------" << std::endl;
-  LOG_MSG2("%s", os.str().c_str());
-#undef PRINT
-}
-
-bool CrawlerTasklogic::ReadConfig() {
-  FILE *hFile = fopen(ROBOT_CONFIG_FILE, "r");
-  if (NULL == hFile) {
-    LOG_MSG2("open %s file error", ROBOT_CONFIG_FILE);
-    return false;
-  }
-  struct stat file_stat;
-  if (0 != stat(ROBOT_CONFIG_FILE, &file_stat)) {
-    LOG_MSG2("get %s stat error", ROBOT_CONFIG_FILE);
-    return false;
-  }
-  off_t filesize = file_stat.st_size;
-  char buf[MAX_BUFFER_SIZE];
-  fread(buf, 1, filesize, hFile);
-  std::string data(buf, filesize);
-  LOG_DEBUG2("config content: %s", data.c_str());
-
-  base_logic::ValueSerializer* engine = base_logic::ValueSerializer::Create(
-      0, &data);
-  int error_code = 0;
-  std::string error_str;
-  base_logic::Value* value = engine->Deserialize(&error_code, &error_str);
-  if (0 != error_code || NULL == value) {
-    LOG_MSG2("deserialize error, error_code = %d, error_str = %s",
-        error_code, error_str);
-    return false;
-  }
-  base_logic::DictionaryValue* config = (base_logic::DictionaryValue*) value;
-  config_.Deserialize(config);
-  delete config;
-  base_logic::ValueSerializer::DeleteSerializer(0, engine);
-  return true;
-}
-
 void CrawlerTasklogic::RobotTaskInit() const {
-  base_logic::TiebaTask::set_tick(config_.tieba_tick);
-  base_logic::WeiboTask::set_tick(config_.weibo_tick);
-  base_logic::TianyaTask::set_tick(config_.tianya_tick);
-  base_logic::QZoneTask::set_tick(config_.qzone_tick);
-  base_logic::MaopuTaskInfo::set_tick(config_.maopu_tick);
-  base_logic::DoubanTaskInfo::set_tick(config_.douban_tick);
-  base_logic::Taoguba::set_tick(config_.taoguba_tick);
-  base_logic::SnowballTaskInfo::set_tick(config_.snowball_tick);
+  int64 tmp;
+  time_t next_exec_time;
+  char *str_time;
+#define INIT_TASK_NEXT_TIME(classname)                                \
+    task_db_->FetchLastExecTime(base_logic::classname().type(), tmp); \
+    base_logic::classname::set_next_exec_time(tmp);                   \
+    next_exec_time = base_logic::classname::next_time();              \
+    str_time = ctime(&next_exec_time);                                \
+    str_time[strlen(str_time)-1] = '\0';                              \
+    LOG_DEBUG2("%s next execute time is [%s]", #classname, str_time)
+
+
+  base_logic::TiebaTask::set_tick(config_->tieba_task_tick);
+  base_logic::WeiboTask::set_tick(config_->weibo_task_tick);
+  base_logic::TianyaTask::set_tick(config_->tianya_task_tick);
+  base_logic::QZoneTask::set_tick(config_->qzone_task_tick);
+  base_logic::MaopuTaskInfo::set_tick(config_->maopu_task_tick);
+  base_logic::DoubanTaskInfo::set_tick(config_->douban_task_tick);
+  base_logic::Taoguba::set_tick(config_->taoguba_task_tick);
+  base_logic::SnowballTaskInfo::set_tick(config_->snowball_task_tick);
+
+  INIT_TASK_NEXT_TIME(TiebaTask);
+  INIT_TASK_NEXT_TIME(WeiboTask);
+  INIT_TASK_NEXT_TIME(TianyaTask);
+  INIT_TASK_NEXT_TIME(QZoneTask);
+  INIT_TASK_NEXT_TIME(MaopuTaskInfo);
+  INIT_TASK_NEXT_TIME(DoubanTaskInfo);
+  INIT_TASK_NEXT_TIME(Taoguba);
+  INIT_TASK_NEXT_TIME(SnowballTaskInfo);
+
+  using base_logic::RobotTask;
+  RobotTask::factor = config_->factor;
+  RobotTask::begin_hour = config_->begin_hour;
+  RobotTask::begin_min = config_->begin_min;
+  RobotTask::end_hour = config_->end_hour;
+  RobotTask::end_min = config_->end_min;
 }
 
 bool CrawlerTasklogic::Init() {
@@ -148,8 +87,8 @@ bool CrawlerTasklogic::Init() {
   r = config->LoadConfig(path);
   base_logic::DataControllerEngine::Init(config);
 
-  ReadConfig();
-  config_.Print();
+  config_ = Config::GetConfig();
+  config_->Print();
 
   RobotTaskInit();	//
 
@@ -168,7 +107,7 @@ router_schduler_engine_  = (*router_engine)();
       robot_task_logic::TaskSchdulerEngine::GetTaskSchdulerManager();
 
   schduler_mgr->InitDB(task_db_.get());
-  schduler_mgr->Init(router_schduler_engine_, &config_);
+  schduler_mgr->Init(router_schduler_engine_, config_);
 
   robot_task_logic::TaskSchdulerEngine* engine =
       robot_task_logic::TaskSchdulerEngine::GetTaskSchdulerEngine();
@@ -310,25 +249,25 @@ bool CrawlerTasklogic::OnIniTimer(struct server *srv) {
   if (srv->add_time_task != NULL) {
     srv->add_time_task(srv, "robot_task", TIMER_SERVER_STARTUP, 1, 1);
     srv->add_time_task(srv, "robot_task", TIME_DISTRIBUTION_TASK,
-                       config_.assign_task_tick, -1);
+                       config_->assign_task_tick, -1);
     srv->add_time_task(srv, "robot_task", TIME_FECTCH_TASK,
-                       config_.fetch_task_tick, -1);
+                       config_->fetch_task_tick, -1);
     srv->add_time_task(srv, "robot_task", TIME_RECYCLINGTASK,
-                       config_.recycle_task_tick, -1);
+                       config_->recycle_task_tick, -1);
     srv->add_time_task(srv, "robot_task", TIME_FETCH_TEMP_TASK, 60, -1);
     srv->add_time_task(srv, "robot_task", TIME_DISTRBUTION_TEMP_TASK, 10, -1);
     srv->add_time_task(srv, "robot_task", TIME_CLEAN_NO_EFFECTIVE,
-                       config_.clean_no_effective_client_tick, -1);
+                       config_->clean_no_effective_client_tick, -1);
     srv->add_time_task(srv, "robot_task", TIME_UPDATE_EXEC_TASKS, 10, -1);
 
-    srv->add_time_task(srv, "robot_task", TIME_FETCH_IP, config_.fetch_ip_tick,
+    srv->add_time_task(srv, "robot_task", TIME_FETCH_IP, config_->fetch_ip_tick,
                        -1);
     srv->add_time_task(srv, "robot_task", TIME_WRITE_COOKIE_USE_TIME,
-                       config_.flush_cookie_use_time_tick, -1);
+                       config_->flush_cookie_use_time_tick, -1);
     srv->add_time_task(srv, "robot_task", TIME_FETCH_CONTENT,
-                       config_.fetch_content_tick, -1);
+                       config_->fetch_content_tick, -1);
     srv->add_time_task(srv, "robot_task", TIME_FETCH_COOKIES,
-                       config_.fetch_cookies_tick, -1);
+                       config_->fetch_cookies_tick, -1);
   }
   return true;
 }

@@ -10,7 +10,7 @@
 #include "crawler_task_db.h"
 #include "forgery_ip_engine.h"
 #include "forgery_ua_engine.h"
-#include "crawler_task_logic.h"		// for Config
+#include "robot_config.h"		// for Config
 
 CookieManager* CookieEngine::cookie_mgr_ = NULL;
 CookieEngine* CookieEngine::cookie_engine_ = NULL;
@@ -35,15 +35,20 @@ bool CookieManager::Init(robot_task_logic::Config *config,
   }
   config_ = config;
   task_db_ = task_db;
+  FetchCookies(0);
   return true;
 }
 
 bool CookieManager::HasAvailableCookie(int64 attr_id) {
   base_logic::MLockGd lk(lock_);
-  CookieList &cookie_list = cookies_cache_.cookie_attr_id_map_[attr_id]
-      .cookie_list;
-  time_t available_time = time(NULL) - config_->cookie_use_tick;
+  CookieList &cookie_list =
+      cookies_cache_.cookie_attr_id_map_[attr_id].cookie_list;
+  time_t available_time = time(NULL) - config_->GetCookieTickByAttrId(attr_id);
 
+  if (!cookie_list.empty()) {
+    LOG_DEBUG2("attr_id: %lld, last_use_time: %lld, available_time: %lld",
+               attr_id, cookie_list.front().last_use_time(), available_time);
+  }
   return !cookie_list.empty()
       && cookie_list.front().last_use_time() < available_time;
 }
@@ -61,8 +66,8 @@ bool CookieManager::WriteCookieUseTime(int64 attr_id) {
                                        it->second.last_use_time());
     }
   } else {
-    CookieList &cookie_list = cookies_cache_.cookie_attr_id_map_[attr_id]
-        .cookie_list;
+    CookieList &cookie_list =
+        cookies_cache_.cookie_attr_id_map_[attr_id].cookie_list;
     CookieListConstIt it = cookie_list.begin();
     for (; it != cookie_list.end(); ++it) {
       task_db_->UpdateCookieAccessTime(it->cookie_id(), it->last_use_time());
@@ -118,7 +123,8 @@ bool CookieManager::FetchCookies(int64 attr_id) {
   }
 
   time_t current_time = time(NULL);
-  time_t usable_time = current_time - config_->cookie_use_tick;
+  time_t usable_time = uint64(-1);
+  LOG_DEBUG2("usable_time = %lld", usable_time);
 
   //
   base_logic::MLockGd lk(lock_);
@@ -154,11 +160,11 @@ bool CookieManager::FetchCookies(int64 attr_id) {
 
 bool CookieManager::GetCookie(int64 attr_id, base_logic::LoginCookie& cookie) {
   base_logic::MLockGd lk(lock_);
-  if (!HasAvailableCookie(attr_id) && !FetchCookies(attr_id)) {
+  if (!HasAvailableCookie(attr_id)) {
     return false;
   }
-  CookieList &cookie_list = cookies_cache_.cookie_attr_id_map_[attr_id]
-      .cookie_list;
+  CookieList &cookie_list =
+      cookies_cache_.cookie_attr_id_map_[attr_id].cookie_list;
   cookie = cookie_list.front();
   cookie.update_use_time();
   cookie_list.pop_front();

@@ -50,9 +50,9 @@ bool ContentManager::FetchContents(int64 attr_id) {
 	}
 
 	ContentIdMap &id_map = cache_.content_id_map;
-	ContentQueue &content_queue = cache_.content_attr_id_map[attr_id].content_queue;
 	ContentList::const_iterator it = content_list.begin();
 	for (; it != content_list.end(); ++it) {
+	  ContentQueue &content_queue = cache_.content_attr_id_map[it->task_type()].content_queue;
 		id_map[it->id()] = *it;
 		content_queue.push(*it);
 	}

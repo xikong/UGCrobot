@@ -327,6 +327,7 @@ bool Managerlogic::HandleAllMessage(const char *func, struct server *srv, const 
 
 bool Managerlogic::OnManagerMessage(struct server *srv, const int socket,
 		const void *msg, const int len) {
+  if (NULL == data_) return false;
 	if (VERIFY_STATE_SUCCESS != data_->svr_info.verify_state) {
 		LOG_MSG("wait server init complete");
 		return false;

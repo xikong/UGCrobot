@@ -115,11 +115,12 @@ bool TaskSchdulerManager::DistributionTask() {
     LOG_MSG("wait server init complete");
     return false;
   }
+
+  base_logic::WLockGd lk(lock_);
   int32 base_num = 1;
   int data_length = 0;
   time_t current_time = time(NULL);
-  LOG_DEBUG2(
-      "distrubute task current_time=%d task_cache_->task_idle_map_.size=%d",
+  LOG_DEBUG2("distrubute task current_time=%d task_cache_->task_idle_map_.size=%d",
       (int) current_time, task_cache_->task_idle_map_.size());
   if (task_cache_->task_idle_map_.size() <= 0) {
     return true;
@@ -136,12 +137,12 @@ bool TaskSchdulerManager::DistributionTask() {
     return true;
   }
 
-  base_logic::WLockGd lk(lock_);
   int32 count = task_cache_->task_idle_map_.size();
   int32 index = 0;
 
   TASKINFO_MAP::iterator it = task_cache_->task_idle_map_.begin();
   TASKINFO_MAP::iterator packet_start = it;
+
   for (; it != task_cache_->task_idle_map_.end(), index < count; index++) {
     base_logic::RobotTaskContent con;
     base_logic::LoginCookie cookie;
@@ -183,6 +184,9 @@ bool TaskSchdulerManager::DistributionTask() {
     task_db_->UpdateRobotTaskDetail(info);
     LOG_MSG2("DistributionTask task_type = %d, task_id=%d", info->type(),
              info->id());
+
+    info->UpdateNextExecTime();
+
     if (tasks.task_set.size() % base_num == 0 && tasks.task_set.size() != 0) {
       tasks.task_num = tasks.task_set.size();
       bool send_success = true;

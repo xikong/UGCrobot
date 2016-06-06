@@ -22,6 +22,8 @@ class CrawlerTaskDB {
     virtual ~CrawlerTaskDB();
 
  public:
+    bool FetchLastExecTime(int64 attr_id, int64 &result);
+
     bool UpdateCookie(int64 cookie_id, int is_valid);
 
     bool UpdateCookieAccessTime(int64 cookie_id, time_t last_access_time);
@@ -50,6 +52,9 @@ class CrawlerTaskDB {
 
     bool FetchBatchTaskContent(int16 task_type, std::list<base_logic::RobotTaskContent> *list, bool is_new = false);
  public:
+    static void CallBackFetchLastExecTime(void* param,
+                base_logic::Value* value);
+
     static void CallBackFectchBatchForgeryUA(void* param,
                 base_logic::Value* value);
 
