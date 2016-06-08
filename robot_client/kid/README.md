@@ -3,28 +3,30 @@
 
 ## 目前支持回帖平台如下
 
-> * [百度贴吧](http://tieba.baidu.com/)
+> * [百度贴吧](http://tieba.baidu.com/) 
 > * [微博](http://www.weibo.com/)
 > * [淘股吧](http://www.taoguba.com.cn/)
 > * [雪球](https://xueqiu.com/2226355683)
 > * [股吧](http://guba.eastmoney.com/)
+> * [同花顺](http://www.10jqka.com.cn/)
 
 关于回帖通信协议见wiki说明： [机器人回帖wiki通信协议](http://wiki.smartdata-x.com/index.php/PluginsSvcRobotTask)
 
----
 
 ## kafka **topic** 说明
 
-> 1、  `robot_tiebacomment`   
-> :    最终解析出来的发帖需要的参数，由 spark 写， 机器人服务端读 
+> 1、  `robot_tiebacomment`  
 
-> 2、 `robot_stock`           
-> :    保存从主任务中解析出来的 url， 由 spark 写，机器人服务端读，机器人服务端读出来后，会把该任务分配给爬虫
+> 最终解析出来的发帖需要的参数，由 spark 写， 机器人服务端读 
+
+> 2、 `robot_stock`   
+
+> 保存从主任务中解析出来的 url， 由 spark 写，机器人服务端读，机器人服务端读出来后，会把该任务分配给爬虫
 
 > 3、 `robot_stockresult`
-> :    保存爬虫反爬取页面的结果，主要是 hbase 中的表名和 row key 信息，根据该信息可以找到爬虫爬取的页面内容。由机器人服务端写， spark 读
 
----
+> 保存爬虫反爬取页面的结果，主要是 hbase 中的表名和 row key 信息，根据该信息可以找到爬虫爬取的页面内容。由机器人服务端写， spark 读
+
 
 ## 各平台回帖参数格式
 
@@ -71,6 +73,11 @@
 | --------  | :-----: | :---- |
 | pre_url   | string |  回帖地址（原帖url） |
 
+### 6. 同花顺 ( plat_id = 7010 )
+
+>| 字段    |  类型  |  备注  |
+| --------  | :-----: | :---- |
+| pre_url   | string |  回帖地址（原帖url） |
 
 ------
 作者 [@liuhongwei][1]     

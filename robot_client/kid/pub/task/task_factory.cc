@@ -51,6 +51,10 @@ extern TaskEngine *GetTaskEngineByType(const int task_type){
         engine = TaskIGuBaEngine::GetInstance();
         break;    
     }
+    case TASK_TONGHUASHUN:{
+        engine = TaskTongHuaShunEngine::GetInstance();
+        break;
+    }
     default:
         LOG_MSG2("Not Suppot This TaskType = %d task", task_type);
         break;
