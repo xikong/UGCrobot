@@ -11,19 +11,18 @@
 #include "robot/robot_logic.h"
 #include "robot/robot_engine.h"
 
-typedef struct robotplugin{
+typedef struct robotplugin {
     char* id;
     char* name;
     char* version;
     char* provider;
-}RobotPlugin;
+} RobotPlugin;
 
 static void *OnRobotStart() {
 
     signal(SIGPIPE, SIG_IGN);
 
-    RobotPlugin *robot = (RobotPlugin *)calloc(1,
-            sizeof(RobotPlugin));
+    RobotPlugin *robot = (RobotPlugin *) calloc(1, sizeof(RobotPlugin));
 
     robot->id = "robot";
     robot->name = "robot";
@@ -42,12 +41,12 @@ static handler_t OnRobotShutdown(struct server* srv, void* pd) {
 }
 
 static handler_t OnRobotConnect(struct server *srv, int fd, void *data,
-        int len) {
+                                int len) {
     return HANDLER_GO_ON;
 }
 
 static handler_t OnRobotMessage(struct server *srv, int fd, void *data,
-        int len) {
+                                int len) {
 
     LOG_MSG2("Receive Client Msg, socket = %d, len = %d", fd, len);
 //  robot_logic::RobotLogic::GetInstance()->OnRobotMessage(srv,
@@ -60,17 +59,16 @@ static handler_t OnRobotClose(struct server *srv, int fd) {
     return HANDLER_GO_ON;
 }
 
-static handler_t OnUnknow(struct server *srv, int fd, void *data,
-        int len) {
+static handler_t OnUnknow(struct server *srv, int fd, void *data, int len) {
     return HANDLER_GO_ON;
 }
 
-static handler_t OnBroadcastConnect(struct server* srv, int fd,
-        void *data, int len) {
+static handler_t OnBroadcastConnect(struct server* srv, int fd, void *data,
+                                    int len) {
     return HANDLER_GO_ON;
 }
 
-static handler_t OnThreadFunc(struct server *srv, int fd, void* data){
+static handler_t OnThreadFunc(struct server *srv, int fd, void* data) {
     robot_logic::RobotEngine::GetInstance()->OnTaskThreadFunc(srv, fd, data);
     return HANDLER_GO_ON;
 }
@@ -81,9 +79,8 @@ static handler_t OnBroadcastClose(struct server* srv, int fd) {
 }
 
 static handler_t OnBroadcastMessage(struct server* srv, int fd, void *data,
-        int len) {
-    robot_logic::RobotLogic::GetInstance()->OnRobotMessage(srv,
-            fd, data, len);
+                                    int len) {
+    robot_logic::RobotLogic::GetInstance()->OnRobotMessage(srv, fd, data, len);
     return HANDLER_GO_ON;
 }
 
@@ -93,8 +90,7 @@ static handler_t OnIniTimer(struct server* srv) {
 }
 
 static handler_t OnTimeOut(struct server* srv, char* id, int opcode, int time) {
-    robot_logic::RobotLogic::GetInstance()->OnTimeout(srv,
-            id, opcode, time);
+    robot_logic::RobotLogic::GetInstance()->OnTimeout(srv, id, opcode, time);
     return HANDLER_GO_ON;
 }
 

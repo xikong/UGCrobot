@@ -46,6 +46,8 @@ class SomeUtils{
 
     static std::string GetLocalTime(const time_t time);
 
+    static std::string GetBackUpFileName();
+
     static long GetCurrentTimeMs();
 };
 
