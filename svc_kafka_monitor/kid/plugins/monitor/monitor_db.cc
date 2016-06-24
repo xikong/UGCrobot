@@ -64,8 +64,6 @@ void MonitorDB::CallbackFetchNewKafkaTopic(void* param,
                 info_value->SetString(L"topic", (rows[1]));
             if (rows[2] != NULL)
                 info_value->SetString(L"addr", (rows[2]));
-            if (rows[2] != NULL)
-                info_value->SetString(L"total_num", (rows[2]));
 
             list->Append((base_logic::Value*) (info_value));
         }

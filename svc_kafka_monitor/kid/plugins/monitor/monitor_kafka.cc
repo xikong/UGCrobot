@@ -52,7 +52,7 @@ void KafkaInfo::ValueSerialize(base_logic::DictionaryValue *dict){
     dict->GetBigInteger(L"id", &id_);
     dict->GetString(L"topic", &topic_);
     dict->GetString(L"addr", &addr_);
-    dict->GetBigInteger(L"total_num", &total_num_);
+    total_num_ = 0;
     is_need_record_ = false;
     LOG_DEBUG2("LoadDb KafkaInfo Success topic = %s, addr = %s", topic_.c_str(), addr_.c_str());
 }

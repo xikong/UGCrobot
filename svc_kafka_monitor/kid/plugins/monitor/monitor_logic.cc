@@ -115,6 +115,8 @@ void MonitorLogic::OnTimerFetchKafkaTask(){
         KafkaInfo *kafka_info = iter->second;
         kafka_info->kafka_.FectchTasks(receive_num);
         if( receive_num > 0){
+            LOG_DEBUG2("kafka_id = %d, topic = %s, pre_num = %d",
+                       kafka_info->id_, kafka_info->topic_.c_str(), kafka_info->total_num_);
             kafka_info->total_num_ += receive_num;
             kafka_info->is_need_record_ = true;
             LOG_DEBUG2("kafka_id = %d, topic = %s, curr_num = %d",
