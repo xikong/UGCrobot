@@ -1,0 +1,24 @@
+{
+	"mysql": [
+		{
+			"host" : "127.0.0.1",
+			"port" : 3306,
+			"user" : "root",
+			"pass" : "dataservice2015",
+			"name" : "crawler_robot"
+		}
+	],
+    "MailSendAccounts": [
+        {		
+            "account": "",
+            "password": "",
+			"smtp_domain" : ""
+        }
+        ,
+        {
+            "account": "",
+            "password": "",
+			"smtp_domain" : ""
+        }
+    ]
+}
