@@ -14,15 +14,17 @@ MonitorDB::MonitorDB() {
     mysql_engine_.reset(base_logic::DataControllerEngine::Create(MYSQL_TYPE));
 }
 
-bool MonitorDB::FetchNewKafkaTopic(std::list<KafkaInfo *> *list, int is_first){
+bool MonitorDB::FetchNewKafkaTopic(std::list<KafkaInfo *> *list,
+                                   int is_first ) {
 
     bool r = false;
     std::stringstream os;
-    scoped_ptr<base_logic::DictionaryValue> dict(new base_logic::DictionaryValue());
-    if( is_first ){
-        os << "call proc_FetchNewKafkaRecord(" << 0 <<  ")";
-    }else{
-        os << "call proc_FetchNewKafkaRecord(" << 1 <<  ")";
+    scoped_ptr<base_logic::DictionaryValue> dict(
+            new base_logic::DictionaryValue());
+    if (is_first) {
+        os << "call proc_FetchNewKafkaRecord(" << 0 << ")";
+    } else {
+        os << "call proc_FetchNewKafkaRecord(" << 1 << ")";
     }
     base_logic::ListValue* listvalue;
     dict->SetString(L"sql", os.str());
@@ -46,15 +48,15 @@ bool MonitorDB::FetchNewKafkaTopic(std::list<KafkaInfo *> *list, int is_first){
 }
 
 void MonitorDB::CallbackFetchNewKafkaTopic(void* param,
-                base_logic::Value* value){
+                                           base_logic::Value* value ) {
     base_logic::DictionaryValue* dict = (base_logic::DictionaryValue*) (value);
     base_logic::ListValue* list = new base_logic::ListValue();
-    base_storage::DBStorageEngine* engine = (base_storage::DBStorageEngine*) (param);
+    base_storage::DBStorageEngine* engine =
+            (base_storage::DBStorageEngine*) (param);
 
     MYSQL_ROW rows;
     int32 num = engine->RecordCount();
     if (num > 0) {
-
         while (rows = (*(MYSQL_ROW*) (engine->FetchRows())->proc)) {
             base_logic::DictionaryValue* info_value =
                     new base_logic::DictionaryValue();
@@ -72,17 +74,25 @@ void MonitorDB::CallbackFetchNewKafkaTopic(void* param,
     dict->Set(L"resultvalue", (base_logic::Value*) (list));
 }
 
-bool MonitorDB::RecordKafkaTaskNum(KafkaInfo *kafka_info){
-    bool r = false;
+bool MonitorDB::RecordKafkaTaskNum(KafkaInfo *kafka_info ) {
     std::stringstream os;
     scoped_ptr<base_logic::DictionaryValue> dict(
             new base_logic::DictionaryValue());
-    os << "call proc_RecordKafkaTaskNum(" << kafka_info->id_ << "," << kafka_info->total_num_ << ")";
-    base_logic::ListValue* listvalue;
+    os << "call proc_RecordKafkaTaskNum(" << kafka_info->id_ << ","
+       << kafka_info->total_num_ << ")";
     dict->SetString(L"sql", os.str());
     mysql_engine_->WriteData(0, (base_logic::Value*) (dict.get()));
     return true;
 }
 
+bool MonitorDB::BackUpKafkaRecord() {
+    std::stringstream os;
+    scoped_ptr<base_logic::DictionaryValue> dict(
+            new base_logic::DictionaryValue());
+    os << "call proc_BackKafkaMonitorRecord()";
+    dict->SetString(L"sql", os.str());
+    mysql_engine_->WriteData(0, (base_logic::Value *) dict.get());
+    return true;
+}
 
 } /* namespace monitor_logic */

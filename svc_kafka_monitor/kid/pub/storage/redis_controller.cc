@@ -7,68 +7,67 @@
 
 namespace base_logic {
 
-
-
 void RedisController::Release() {
 }
 
-
-bool RedisController::WriteData(const int32 type, base_logic::Value* value) {
+bool RedisController::WriteData(const int32 type, base_logic::Value* value ) {
     switch (type) {
-    case HASH_VALUE:
-        break;
-      default:
-        break;
+        case HASH_VALUE:
+            break;
+        default:
+            break;
     }
     return true;
 }
 
-bool RedisController::ReadData(const int32 type, base_logic::Value* value,
-        void (*storage_get)(void*, base_logic::Value*)) {
+bool RedisController::ReadData(
+        const int32 type, base_logic::Value* value,
+        void (*storage_get)(void*, base_logic::Value* ) ) {
     switch (type) {
-      case HASH_VALUE:
-        ReadHashData(value, storage_get);
-        break;
-      case READIS_KEY_VALUE:
-        ReadKeyValueData(value, storage_get);
-        break;
-      default:
-        break;
+        case HASH_VALUE:
+            ReadHashData(value, storage_get);
+            break;
+        case READIS_KEY_VALUE:
+            ReadKeyValueData(value, storage_get);
+            break;
+        default:
+            break;
     }
     return true;
 }
 
-
-bool RedisController::ReadKeyValueData(base_logic::Value* value,
-        void (*storage_get)(void*, base_logic::Value*)) {
+bool RedisController::ReadKeyValueData(
+        base_logic::Value* value,
+        void (*storage_get)(void*, base_logic::Value* ) ) {
     bool r = false;
     std::string key;
-    base_logic::DictionaryValue* dict = (base_logic::DictionaryValue*)(value);
+    base_logic::DictionaryValue* dict = (base_logic::DictionaryValue*) (value);
     r = dict->GetString(L"rediskey", &key);
     if (!r)
         return r;
     base_dic::AutoDicCommEngine auto_engine;
-    base_storage::DictionaryStorageEngine* redis_engine =
-            auto_engine.GetDicEngine();
+    base_storage::DictionaryStorageEngine* redis_engine = auto_engine
+            .GetDicEngine();
     //  r = redis_engine->GetAllHash()
     return true;
 }
 
-bool RedisController::ReadHashData(base_logic::Value* value,
-        void (*storage_get)(void*, base_logic::Value*)) {
+bool RedisController::ReadHashData(
+        base_logic::Value* value,
+        void (*storage_get)(void*, base_logic::Value* ) ) {
     bool r = false;
     std::list<std::string> list;
-    base_logic::DictionaryValue* dict = (base_logic::DictionaryValue*)(value);
+    base_logic::DictionaryValue* dict = (base_logic::DictionaryValue*) (value);
     std::string redis_map;
     r = dict->GetString(L"redismap", &redis_map);
     if (!r)
         return r;
     base_logic::ListValue* list_value = new base_logic::ListValue();
     base_dic::AutoDicCommEngine auto_engine;
-    base_storage::DictionaryStorageEngine* redis_engine =
-            auto_engine.GetDicEngine();
-    r = redis_engine->GetHashValues(redis_map.c_str(),
-            redis_map.length(), list);
+    base_storage::DictionaryStorageEngine* redis_engine = auto_engine
+            .GetDicEngine();
+    r = redis_engine->GetHashValues(redis_map.c_str(), redis_map.length(),
+                                    list);
     if (!r)
         return false;
     while (list.size() > 0) {

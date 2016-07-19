@@ -12,21 +12,21 @@
 
 namespace base_logic {
 
-class MysqlController:public DataControllerEngine {
+class MysqlController : public DataControllerEngine{
  public:
-    MysqlController() {}
-    virtual ~MysqlController() {}
+    MysqlController() {
+    }
+    virtual ~MysqlController() {
+    }
  public:
-    void InitParam(std::list<base::ConnAddr>* addrlist);
+    void InitParam(std::list<base::ConnAddr>* addrlist );
     void Release();
  public:
     bool ReadData(const int32 type, base_logic::Value* value,
-            void (*storage_get)(void*, base_logic::Value*));
+                  void (*storage_get)(void*, base_logic::Value* ) );
 
-    bool WriteData(const int32 type, base_logic::Value* value);
+    bool WriteData(const int32 type, base_logic::Value* value );
 };
 }  // namespace base_logic
-
-
 
 #endif  // PUB_STORAGE_MYSQL_CONTROLLER_H_

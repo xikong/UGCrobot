@@ -11,7 +11,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-int monitor_plugin_init(struct plugin *pl);
+int monitor_plugin_init(struct plugin *pl );
 #ifdef __cplusplus
 }
 #endif

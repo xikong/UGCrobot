@@ -18,25 +18,25 @@ namespace monitor_logic {
 class MonitorKafka{
  public:
     ~MonitorKafka();
-    bool Initialize(const string &topic, const string &kafka_addr);
+    bool Initialize(const string &topic, const string &kafka_addr );
 
  public:
-    void FectchTasks(int &count);
+    void FectchTasks(int &count );
 
  private:
-    kafka_consumer      kafka_consumer_;
+    kafka_consumer kafka_consumer_;
 };
 
 class KafkaInfo{
  public:
-    void ValueSerialize(base_logic::DictionaryValue *dict);
+    void ValueSerialize(base_logic::DictionaryValue *dict );
  public:
-    int64           id_;
-    std::string     topic_;
-    std::string     addr_;
-    int64           total_num_;
-    MonitorKafka    kafka_;
-    bool            is_need_record_;
+    int64 id_;
+    std::string topic_;
+    std::string addr_;
+    int64 total_num_;
+    MonitorKafka kafka_;
+    bool is_need_record_;
 };
 
 } /* namespace monitor_logic */

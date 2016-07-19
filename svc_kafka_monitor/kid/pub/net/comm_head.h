@@ -44,19 +44,19 @@ using std::string;
     PRINT_INT(server_id);\
     PRINT_INT(reserved);\
 
-enum ePRS {
+enum ePRS{
     NOZIP_AND_NOENCRYPT = 0,
     ZIP_AND_NOENCRYPT = 1,
     NOZIP_AND_ENCRYPT = 2,
     ZIP_AND_ENCRYPT = 3
 };
 
-enum eRegType {
+enum eRegType{
     FAILED = 0,
     SUCCESS = 1
 };
 
-enum eRobotType {
+enum eRobotType{
     TASK_TIEBA = 7001,                  //贴吧
     TASK_WEIBO = 7002,                  //微博
     TASK_TIANYA = 7003,                 //BBS 天涯

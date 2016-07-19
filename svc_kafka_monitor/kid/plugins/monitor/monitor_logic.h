@@ -23,26 +23,29 @@ class MonitorLogic{
     static MonitorLogic * GetPtr();
     static MonitorLogic & GetRef();
 
-    bool OnIniTimer(struct server *srv);
-    bool OnTimeout(struct server *srv, char* id, int opcode, int time);
+    bool OnIniTimer(struct server *srv );
+    bool OnTimeout(struct server *srv, char* id, int opcode, int time );
 
  private:
     MonitorLogic();
     bool Init();
     void OnTimerFetchKafkaTask();
-    void OnTimerFetchNewKafkaTopicDB(bool is_first);
+    void OnTimerFetchNewKafkaTopicDB(bool is_first );
     void OnTimerRecordCurrKafkaTopicNum();
+    void OnTimerBackUpDB();
 
  private:
-    scoped_ptr<MonitorDB>   manager_db_;
-    static const string     g_default_config_path_;
-    struct threadrw_t *     lock_;
-    ALL_KAFKA_MAP           all_kafka_map_;
+    scoped_ptr<MonitorDB> manager_db_;
+    static const string g_default_config_path_;
+    struct threadrw_t * lock_;
+    ALL_KAFKA_MAP all_kafka_map_;
+    int next_back_time_;
 
  private:
-    static const int        FETCH_KAFKA_TASK_INTERVAL;
-    static const int        FETCH_NEW_KAFKA_TOPIC_INTERVAL;
-    static const int        RECORD_KAFKA_TOPIC_INTERVAL;
+    static const int FETCH_KAFKA_TASK_INTERVAL;
+    static const int FETCH_NEW_KAFKA_TOPIC_INTERVAL;
+    static const int RECORD_KAFKA_TOPIC_INTERVAL;
+    static const int CHECK_NEXT_DAY_ARRIVE_INTERVAL;
 
 };
 

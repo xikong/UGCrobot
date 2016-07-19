@@ -9,7 +9,7 @@
 
 namespace base_logic {
 
-void RFileLockGd::RLockInit(FILE *fp){
+void RFileLockGd::RLockInit(FILE *fp ) {
     m_fd = fileno(fp);
     m_lock = (struct flock *) malloc(sizeof(struct flock));
 
@@ -20,7 +20,7 @@ void RFileLockGd::RLockInit(FILE *fp){
     m_lock->l_pid = getpid();
 }
 
-void WFileLockGd::WLockInit(FILE *fp){
+void WFileLockGd::WLockInit(FILE *fp ) {
     m_fd = fileno(fp);
     m_lock = (struct flock *) malloc(sizeof(struct flock));
 
@@ -30,6 +30,5 @@ void WFileLockGd::WLockInit(FILE *fp){
     m_lock->l_whence = SEEK_SET;
     m_lock->l_pid = getpid();
 }
-
 
 } /* namespace base_logic */

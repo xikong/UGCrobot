@@ -15,14 +15,14 @@ ForgeryIP::ForgeryIP() {
     data_ = new Data();
 }
 
-ForgeryIP::ForgeryIP(const ForgeryIP& ip)
-:data_(ip.data_) {
+ForgeryIP::ForgeryIP(const ForgeryIP& ip )
+        : data_(ip.data_) {
     if (data_ != NULL) {
         data_->AddRef();
     }
 }
 
-ForgeryIP& ForgeryIP::operator =(const ForgeryIP& ip) {
+ForgeryIP& ForgeryIP::operator =(const ForgeryIP& ip ) {
     if (ip.data_ != NULL) {
         ip.data_->AddRef();
     }
@@ -33,12 +33,12 @@ ForgeryIP& ForgeryIP::operator =(const ForgeryIP& ip) {
     data_ = ip.data_;
     return (*this);
 }
-bool ForgeryIP::cmp(const ForgeryIP& t_info, const ForgeryIP& r_info) {
+bool ForgeryIP::cmp(const ForgeryIP& t_info, const ForgeryIP& r_info ) {
     return t_info.access_time() < r_info.access_time();
 }
 
-void ForgeryIP::ValueSerialization(base_logic::DictionaryValue* dict) {
-	int64 tmp;
+void ForgeryIP::ValueSerialization(base_logic::DictionaryValue* dict ) {
+    int64 tmp;
     dict->GetBigInteger(L"id", &tmp);
     data_->id_ = tmp;
     //  dict->GetInteger(L"type", reinterpret_cast<int32*>(&data_->type_));
@@ -52,14 +52,14 @@ ForgeryUA::ForgeryUA() {
     data_ = new Data();
 }
 
-ForgeryUA::ForgeryUA(const ForgeryUA& ua)
-:data_(ua.data_) {
+ForgeryUA::ForgeryUA(const ForgeryUA& ua )
+        : data_(ua.data_) {
     if (data_ != NULL) {
         data_->AddRef();
     }
 }
 
-ForgeryUA& ForgeryUA::operator =(const ForgeryUA& ua) {
+ForgeryUA& ForgeryUA::operator =(const ForgeryUA& ua ) {
     if (ua.data_ != NULL) {
         ua.data_->AddRef();
     }
@@ -71,8 +71,8 @@ ForgeryUA& ForgeryUA::operator =(const ForgeryUA& ua) {
     return (*this);
 }
 
-void ForgeryUA::ValueSerialization(base_logic::DictionaryValue* dict) {
-	int64 tmp;
+void ForgeryUA::ValueSerialization(base_logic::DictionaryValue* dict ) {
+    int64 tmp;
     dict->GetBigInteger(L"id", &tmp);
     data_->id_ = tmp;
     //  dict->GetInteger(L"type", reinterpret_cast<int32*>(&data_->type_));
@@ -82,14 +82,14 @@ void ForgeryUA::ValueSerialization(base_logic::DictionaryValue* dict) {
     dict->GetBigInteger(L"access_time", &data_->access_time_);
 }
 
-MailContentInfo::MailContentInfo(const MailContentInfo &other){
+MailContentInfo::MailContentInfo(const MailContentInfo &other ) {
     id_ = other.id_;
     mailsubject_ = other.mailsubject_;
     mailbody_ = other.mailbody_;
 }
 
-MailContentInfo & MailContentInfo::operator=(const MailContentInfo &other){
-    if( this == &other){
+MailContentInfo & MailContentInfo::operator=(const MailContentInfo &other ) {
+    if (this == &other) {
         return *this;
     }
     id_ = other.id_;
@@ -98,7 +98,7 @@ MailContentInfo & MailContentInfo::operator=(const MailContentInfo &other){
     return *this;
 }
 
-void MailContentInfo::ValueSerialize(base_logic::DictionaryValue *dict){
+void MailContentInfo::ValueSerialize(base_logic::DictionaryValue *dict ) {
     dict->GetBigInteger(L"id", &id_);
     dict->GetString(L"mail_subject", &mailsubject_);
     dict->GetString(L"mail_body", &mailbody_);
@@ -106,7 +106,7 @@ void MailContentInfo::ValueSerialize(base_logic::DictionaryValue *dict){
     LOG_DEBUG2("LoadDb MailInfo Success subject = %s, body = %s", mailsubject_.c_str(), mailbody_.c_str());
 }
 
-void MailTargetInfo::GetDataFromKafka(base_logic::DictionaryValue &dic){
+void MailTargetInfo::GetDataFromKafka(base_logic::DictionaryValue &dic ) {
     dic.GetString(L"mail_target", &target_);
 }
 

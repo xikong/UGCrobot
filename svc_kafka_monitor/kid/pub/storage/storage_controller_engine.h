@@ -10,7 +10,6 @@
 #include "config/config.h"
 #include "storage/storage.h"
 
-
 enum STORAGETYPE{
     REIDS_TYPE = 0,
     MYSQL_TYPE = 1,
@@ -27,25 +26,24 @@ enum REDIS_TYPE{
     READIS_KEY_VALUE = 1,
 };
 
-
 namespace base_logic {
 
-class DataControllerEngine {
+class DataControllerEngine{
  public:
-    static DataControllerEngine* Create(int32 type);
-    static void Init(config::FileConfig* config);
+    static DataControllerEngine* Create(int32 type );
+    static void Init(config::FileConfig* config );
     static void Dest();
-    virtual ~DataControllerEngine() {}
+    virtual ~DataControllerEngine() {
+    }
  public:
     virtual void Release() = 0;
-    virtual void InitParam(std::list<base::ConnAddr>* addrlist) = 0;
+    virtual void InitParam(std::list<base::ConnAddr>* addrlist ) = 0;
  public:
     virtual bool ReadData(const int32 type, base_logic::Value* value,
-    void (*storage_get)(void*, base_logic::Value*)) = 0;
+                          void (*storage_get)(void*, base_logic::Value* ) ) = 0;
 
-    virtual bool WriteData(const int32 type, base_logic::Value* value) = 0;
+    virtual bool WriteData(const int32 type, base_logic::Value* value ) = 0;
 };
 }  // namespace base_logic
-
 
 #endif /* PLUGINS_CRAWLERSVC_STORAGE_STORAGE_BASE_ENGINE_H_ */

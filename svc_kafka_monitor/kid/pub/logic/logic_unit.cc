@@ -42,12 +42,12 @@ struct server* CoreSoUtils::GetSRV() {
     return CoreSoUtils::srv;
 }
 
-int32 SendUtils::SendFull(int socket, const char *buffer, size_t nbytes) {
+int32 SendUtils::SendFull(int socket, const char *buffer, size_t nbytes ) {
     return CoreSoUtils::GetSRV()->send_msg(socket, buffer, nbytes);
 }
 
 bool SendUtils::SendBytes(int socket, const void* bytes, int32 len,
-                          const char* file, int32 line) {
+                          const char* file, int32 line ) {
     if (socket <= 0 || bytes == NULL || len <= 0)
         return false;
 
@@ -60,7 +60,7 @@ bool SendUtils::SendBytes(int socket, const void* bytes, int32 len,
 }
 
 bool SendUtils::SendMessage(int socket, struct PacketHead *packet,
-                            const char* file, int32 line) {
+                            const char* file, int32 line ) {
     bool r;
     void *packet_stream = NULL;
     int32 packet_stream_length = 0;
@@ -100,7 +100,7 @@ bool SendUtils::SendMessage(int socket, struct PacketHead *packet,
 }
 
 void* SomeUtils::GetLibraryFunction(const std::string& library_name,
-                                    const std::string& func_name) {
+                                    const std::string& func_name ) {
     void* engine = NULL;
     basic::libhandle handle_lancher = NULL;
     handle_lancher = basic::load_native_library(library_name.c_str());
@@ -120,14 +120,14 @@ void* SomeUtils::GetLibraryFunction(const std::string& library_name,
 }
 
 void SomeUtils::CreateToken(const int64 uid, const std::string& password,
-                            std::string* token) {
+                            std::string* token ) {
     std::stringstream os;
     os << uid << base::SysRadom::GetInstance()->GetRandomID() << password;
     base::MD5Sum md5(os.str());
     (*token) = md5.GetHash();
 }
 
-int SomeUtils::GetAddressBySocket(const int sock, std::string &ip) {
+int SomeUtils::GetAddressBySocket(const int sock, std::string &ip ) {
 
     struct sockaddr_storage sa;
     int salen = sizeof(sa);
@@ -145,7 +145,7 @@ int SomeUtils::GetAddressBySocket(const int sock, std::string &ip) {
     return -1;
 }
 
-int SomeUtils::GetPortBySocket(const int socket, int16 &port) {
+int SomeUtils::GetPortBySocket(const int socket, int16 &port ) {
     struct sockaddr_storage sa;
     int salen = sizeof(sa);
     if (::getpeername(socket, (struct sockaddr*) &sa, (socklen_t *) &salen)
@@ -163,7 +163,7 @@ int SomeUtils::GetPortBySocket(const int socket, int16 &port) {
     return -1;
 }
 
-std::string SomeUtils::GetLocalTime(const time_t current_time) {
+std::string SomeUtils::GetLocalTime(const time_t current_time ) {
     char tmp[64];
     strftime(tmp, sizeof(tmp), "%Y/%m/%d %H:%M:%S", localtime(&current_time));
     std::string time(tmp);
@@ -176,10 +176,10 @@ long SomeUtils::GetCurrentTimeMs() {
     return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 
-std::string SomeUtils::GetBackUpFileName(){
+std::string SomeUtils::GetBackUpFileName() {
     time_t now = time(NULL);
     char tmp[64];
-    strftime( tmp, sizeof(tmp), "%Y-%m-%d", localtime(&now));
+    strftime(tmp, sizeof(tmp), "%Y-%m-%d", localtime(&now));
     std::string time(tmp);
     return time + ".log";;
 }

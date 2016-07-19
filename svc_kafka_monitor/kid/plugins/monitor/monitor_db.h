@@ -16,12 +16,13 @@ namespace monitor_logic {
 class MonitorDB{
  public:
     MonitorDB();
-    bool FetchNewKafkaTopic(std::list<KafkaInfo *> *list, int is_first);
-    bool RecordKafkaTaskNum(KafkaInfo *kafka_info);
+    bool FetchNewKafkaTopic(std::list<KafkaInfo *> *list, int is_first );
+    bool RecordKafkaTaskNum(KafkaInfo *kafka_info );
+    bool BackUpKafkaRecord();
 
  private:
     static void CallbackFetchNewKafkaTopic(void* param,
-                base_logic::Value* value);
+                                           base_logic::Value* value );
 
  private:
     scoped_ptr<base_logic::DataControllerEngine> mysql_engine_;

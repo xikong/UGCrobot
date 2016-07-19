@@ -20,7 +20,7 @@ PacketHead::~PacketHead() {
     delete out_;
 }
 
-bool PacketHead::PackHead(const int packet_length) {
+bool PacketHead::PackHead(const int packet_length ) {
 
     out_ = new packet::DataOutPacket(
             false, packet_length - sizeof(int16) - sizeof(int8));
@@ -41,7 +41,7 @@ bool PacketHead::PackHead(const int packet_length) {
     return true;
 }
 
-bool PacketHead::UnpackHead(const void* packet_stream, int32 len) {
+bool PacketHead::UnpackHead(const void* packet_stream, int32 len ) {
 
     packet::DataInPacket in_packet(reinterpret_cast<const char*>(packet_stream),
                                    len);
@@ -97,7 +97,8 @@ bool PacketHead::UnpackHead(const void* packet_stream, int32 len) {
     return true;
 }
 
-bool PacketHead::PackStream(void **packet_stream, int32 &packet_stream_length) {
+bool PacketHead::PackStream(void **packet_stream,
+                            int32 &packet_stream_length ) {
 
     this->PackHead(packet_stream_length);
 
@@ -110,7 +111,7 @@ bool PacketHead::PackStream(void **packet_stream, int32 &packet_stream_length) {
 }
 
 bool RobotRegisterInfo::PackStream(void **packet_stream,
-                                   int32 &packet_stream_length) {
+                                   int32 &packet_stream_length ) {
 
     //压包头
     this->PackHead(ROBOT_REGISTER_INFO_SIZE);
@@ -122,13 +123,14 @@ bool RobotRegisterInfo::PackStream(void **packet_stream,
 
     //是否压缩加密
     net::PacketProsess::IsZipPacket(this->is_zip_encrypt_,
-                                    ROBOT_REGISTER_INFO_SIZE, this->out_,
-                                    packet_stream, packet_stream_length);
+    ROBOT_REGISTER_INFO_SIZE,
+                                    this->out_, packet_stream,
+                                    packet_stream_length);
 
     return true;
 }
 
-bool RobotRegisterSuccess::UnpackStream(const void* packet_stream, int32 len) {
+bool RobotRegisterSuccess::UnpackStream(const void* packet_stream, int32 len ) {
 
     this->UnpackHead(packet_stream, len);
 
@@ -137,7 +139,7 @@ bool RobotRegisterSuccess::UnpackStream(const void* packet_stream, int32 len) {
 
     //分配的router_ip
     memcpy(this->router_ip, this->in_->ReadData(IP_FORGEN_SIZE - 1, temp),
-           IP_FORGEN_SIZE - 1);
+    IP_FORGEN_SIZE - 1);
     int32 ip_len =
             (temp - 1) < (IP_FORGEN_SIZE - 1) ?
                     (temp - 1) : (IP_FORGEN_SIZE - 1);
@@ -148,7 +150,7 @@ bool RobotRegisterSuccess::UnpackStream(const void* packet_stream, int32 len) {
 
     //分配的token
     memcpy(this->token, this->in_->ReadData(TOKEN_SIZE - 1, temp),
-           TOKEN_SIZE - 1);
+    TOKEN_SIZE - 1);
     int32 token_len =
             (temp - 1) < (TOKEN_SIZE - 1) ? (temp - 1) : (TOKEN_SIZE - 1);
     this->token[token_len] = '\0';
@@ -157,7 +159,7 @@ bool RobotRegisterSuccess::UnpackStream(const void* packet_stream, int32 len) {
 }
 
 bool RobotRequestLoginRouter::PackStream(void **packet_stream,
-                                         int32 &packet_stream_length) {
+                                         int32 &packet_stream_length ) {
 
     this->PackHead(REG_LOGIN_ROUTER_SIZE);
 
@@ -165,14 +167,15 @@ bool RobotRequestLoginRouter::PackStream(void **packet_stream,
 
     //是否压缩加密
     net::PacketProsess::IsZipPacket(this->is_zip_encrypt_,
-                                    REG_LOGIN_ROUTER_SIZE, this->out_,
-                                    packet_stream, packet_stream_length);
+    REG_LOGIN_ROUTER_SIZE,
+                                    this->out_, packet_stream,
+                                    packet_stream_length);
 
     return true;
 }
 
 bool RobotLoginRouterResult::UnpackStream(const void *packet_stream,
-                                          int32 len) {
+                                          int32 len ) {
 
     this->UnpackHead(packet_stream, len);
 
@@ -182,7 +185,7 @@ bool RobotLoginRouterResult::UnpackStream(const void *packet_stream,
 }
 
 bool RobotStatePacket::PackStream(void **packet_stream,
-                                  int32 &packet_stream_length) {
+                                  int32 &packet_stream_length ) {
 
     this->PackHead(ROBOT_STATE_SIZE);
 
@@ -197,7 +200,7 @@ bool RobotStatePacket::PackStream(void **packet_stream,
     return true;
 }
 
-bool TaskHead::UnpackTaskHead(packet::DataInPacket *in, int &temp) {
+bool TaskHead::UnpackTaskHead(packet::DataInPacket *in, int &temp ) {
 
     this->task_id_ = in->Read64();
     this->cookie_id_ = in->Read64();
@@ -207,12 +210,12 @@ bool TaskHead::UnpackTaskHead(packet::DataInPacket *in, int &temp) {
     ReadDataByLen(this->forge_ip_, temp, in);
     ReadDataByLen(this->forge_ua_, temp, in);
 
-    LOG_DEBUG2("task_id = %d", this->task_id_); LOG_DEBUG2("cookie_id = %d", this->cookie_id_); LOG_DEBUG2("cookie = %s", this->cookie_.c_str()); LOG_DEBUG2("content = %s", this->content_.c_str()); LOG_DEBUG2("forge_ip = %s", this->forge_ip_.c_str()); LOG_DEBUG2("forge_ua = %s", this->forge_ua_.c_str());
+    LOG_DEBUG2("task_id = %d", this->task_id_);LOG_DEBUG2("cookie_id = %d", this->cookie_id_);LOG_DEBUG2("cookie = %s", this->cookie_.c_str());LOG_DEBUG2("content = %s", this->content_.c_str());LOG_DEBUG2("forge_ip = %s", this->forge_ip_.c_str());LOG_DEBUG2("forge_ua = %s", this->forge_ua_.c_str());
 
     return true;
 }
 
-bool TaskWeiBoPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
+bool TaskWeiBoPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp ) {
 
     this->UnpackTaskHead(in, temp);
 
@@ -222,7 +225,7 @@ bool TaskWeiBoPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
     return true;
 }
 
-bool TaskTianYaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
+bool TaskTianYaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp ) {
 
     this->UnpackTaskHead(in, temp);
 
@@ -235,7 +238,7 @@ bool TaskTianYaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
     return true;
 }
 
-bool TaskTieBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
+bool TaskTieBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp ) {
 
     this->UnpackTaskHead(in, temp);
 
@@ -246,12 +249,12 @@ bool TaskTieBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
     this->floor_num_ = in->Read32();
     ReadDataByLen(this->repost_id_, temp, in);
 
-    LOG_DEBUG2("pre_url = %s", this->pre_url_.c_str()); LOG_DEBUG2("kw = %s", this->kw_.c_str()); LOG_DEBUG2("fid = %s", this->fid_.c_str()); LOG_DEBUG2("tbs = %s", this->tbs_.c_str()); LOG_DEBUG2("floor_num = %d", this->floor_num_); LOG_DEBUG2("repost_id = %s", this->repost_id_.c_str());
+    LOG_DEBUG2("pre_url = %s", this->pre_url_.c_str());LOG_DEBUG2("kw = %s", this->kw_.c_str());LOG_DEBUG2("fid = %s", this->fid_.c_str());LOG_DEBUG2("tbs = %s", this->tbs_.c_str());LOG_DEBUG2("floor_num = %d", this->floor_num_);LOG_DEBUG2("repost_id = %s", this->repost_id_.c_str());
 
     return true;
 }
 
-bool TaskQQPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
+bool TaskQQPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp ) {
 
     this->UnpackTaskHead(in, temp);
 
@@ -261,7 +264,7 @@ bool TaskQQPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
     return true;
 }
 
-bool TaskMopPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
+bool TaskMopPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp ) {
 
     //解任务头
     this->UnpackTaskHead(in, temp);
@@ -275,7 +278,7 @@ bool TaskMopPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
     return true;
 }
 
-bool TaskDouBanPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
+bool TaskDouBanPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp ) {
 
     this->UnpackTaskHead(in, temp);
 
@@ -284,31 +287,31 @@ bool TaskDouBanPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
     return true;
 }
 
-bool TaskTaoGuBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
+bool TaskTaoGuBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp ) {
 
     this->UnpackTaskHead(in, temp);
 
     ReadDataByLen(this->topicID_, temp, in);
     ReadDataByLen(this->subject_, temp, in);
 
-    LOG_DEBUG2("topic_id = %s", this->topicID_.c_str()); LOG_DEBUG2("subject = %s", this->subject_.c_str());
+    LOG_DEBUG2("topic_id = %s", this->topicID_.c_str());LOG_DEBUG2("subject = %s", this->subject_.c_str());
 
     return true;
 }
 
-bool TaskXueQiuPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
+bool TaskXueQiuPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp ) {
 
     this->UnpackTaskHead(in, temp);
 
     ReadDataByLen(this->pre_url_, temp, in);
     ReadDataByLen(this->topic_id_, temp, in);
 
-    LOG_DEBUG2("pre_url = %s", this->pre_url_.c_str()); LOG_DEBUG2("topic_id = %s", this->topic_id_.c_str());
+    LOG_DEBUG2("pre_url = %s", this->pre_url_.c_str());LOG_DEBUG2("topic_id = %s", this->topic_id_.c_str());
 
     return true;
 }
 
-bool TaskIGuBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
+bool TaskIGuBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp ) {
 
     this->UnpackTaskHead(in, temp);
 
@@ -318,7 +321,8 @@ bool TaskIGuBaPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp) {
     return true;
 }
 
-bool TaskTongHuaShunPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp){
+bool TaskTongHuaShunPacket::UnpackTaskBody(packet::DataInPacket *in,
+                                           int &temp ) {
 
     this->UnpackTaskHead(in, temp);
 
@@ -329,8 +333,7 @@ bool TaskTongHuaShunPacket::UnpackTaskBody(packet::DataInPacket *in, int &temp){
     return true;
 }
 
-
-bool MultiTaskList::UnpackStream(const void *packet_stream, int32 len) {
+bool MultiTaskList::UnpackStream(const void *packet_stream, int32 len ) {
 
     this->UnpackHead(packet_stream, len);
 
@@ -393,10 +396,11 @@ bool MultiTaskList::UnpackStream(const void *packet_stream, int32 len) {
                 task = (struct TaskHead *) task_temp;
                 break;
             }
-            case TASK_TONGHUASHUN:{
-                struct TaskTongHuaShunPacket *task_temp = new struct TaskTongHuaShunPacket;
+            case TASK_TONGHUASHUN: {
+                struct TaskTongHuaShunPacket *task_temp =
+                        new struct TaskTongHuaShunPacket;
                 task_temp->UnpackTaskBody(this->in_, temp);
-                task = (struct TaskHead *)task_temp;
+                task = (struct TaskHead *) task_temp;
                 break;
             }
                 //TUDO 其他任务
@@ -420,7 +424,7 @@ bool MultiTaskList::UnpackStream(const void *packet_stream, int32 len) {
 }
 
 bool FeedBackTaskStatus::PackStream(void **packet_stream,
-                                    int32 &packet_stream_length) {
+                                    int32 &packet_stream_length ) {
 
     //包体长度
     int feed_back_msg_size = FEEDBACK_TASK_STATUS_SIZE + this->error_code.size()
@@ -443,7 +447,7 @@ bool FeedBackTaskStatus::PackStream(void **packet_stream,
     return true;
 }
 
-bool ReadDataByLen(string &data, int &temp, packet::DataInPacket *in) {
+bool ReadDataByLen(string &data, int &temp, packet::DataInPacket *in ) {
 
     if (NULL == in) {
         return false;

@@ -21,27 +21,29 @@ namespace logic {
 class SomeUtils{
  public:
     static void* GetLibraryFunction(const std::string& library_name,
-            const std::string& func_name);
+                                    const std::string& func_name );
 
     static void CreateToken(const int64 uid, const std::string& password,
-            std::string* token);
+                            std::string* token );
 
-    static inline int8   StringToIntChar(const char* str) {
+    static inline int8 StringToIntChar(const char* str ) {
         int8 intvalue = 0;
-        base::BasicUtil::StringUtil::StringToCharInt(std::string(str),&intvalue);
+        base::BasicUtil::StringUtil::StringToCharInt(std::string(str),
+                                                     &intvalue);
         return intvalue;
     }
-    static inline int16 StringToIntShort(const char* str) {
+    static inline int16 StringToIntShort(const char* str ) {
         int16 intvalue = 0;
-        base::BasicUtil::StringUtil::StringToShortInt(std::string(str),&intvalue);
+        base::BasicUtil::StringUtil::StringToShortInt(std::string(str),
+                                                      &intvalue);
         return intvalue;
     }
 
-    static int GetAddressBySocket(const int sock, std::string &ip);
+    static int GetAddressBySocket(const int sock, std::string &ip );
 
-    static int GetPortBySocket(const int socket, int16 &port);
+    static int GetPortBySocket(const int socket, int16 &port );
 
-    static std::string GetLocalTime(const time_t time);
+    static std::string GetLocalTime(const time_t time );
 
     static std::string GetBackUpFileName();
 
@@ -49,7 +51,7 @@ class SomeUtils{
 };
 
 class CoreSoUtils{
-public:
+ public:
     static void InitSRV();
 
     static struct server* GetSRV();
@@ -59,11 +61,11 @@ public:
 
 class SendUtils{
  public:
-    static int32 SendFull(int socket, const char* buffer, size_t bytes);
+    static int32 SendFull(int socket, const char* buffer, size_t bytes );
     static bool SendBytes(int socket, const void* bytes, int32 len,
-            const char* file, int32 line);
+                          const char* file, int32 line );
     static bool SendMessage(int socket, struct PacketHead *packet,
-            const char* file, int32 line);
+                            const char* file, int32 line );
 
     static struct threadrw_t* socket_lock_;
 };
@@ -78,6 +80,5 @@ class SendUtils{
 
 #define closelockconnect(socket) \
     shutdown(socket, SHUT_RDWR);
-
 
 #endif /* LOGIC_UNIT_H_ */

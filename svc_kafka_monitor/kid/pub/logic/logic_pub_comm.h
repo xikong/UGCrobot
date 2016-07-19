@@ -19,9 +19,9 @@
 
 namespace base_logic {
 
-class RFileLockGd {
+class RFileLockGd{
  public:
-    RFileLockGd(FILE *fp) {
+    RFileLockGd(FILE *fp ) {
         RLockInit(fp);
         fcntl(m_fd, F_SETLKW, &m_lock);
     }
@@ -33,16 +33,16 @@ class RFileLockGd {
     }
 
  private:
-    void RLockInit(FILE *fp);
+    void RLockInit(FILE *fp );
 
  private:
     int m_fd;
     struct flock *m_lock;
 };
 
-class WFileLockGd {
+class WFileLockGd{
  public:
-    WFileLockGd(FILE *fp) {
+    WFileLockGd(FILE *fp ) {
         WLockInit(fp);
         fcntl(m_fd, F_SETLKW, &m_lock);
     }
@@ -54,7 +54,7 @@ class WFileLockGd {
     }
 
  private:
-    void WLockInit(FILE *fp);
+    void WLockInit(FILE *fp );
  private:
     int m_fd;
     struct flock *m_lock;

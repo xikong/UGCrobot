@@ -36,8 +36,7 @@
 using std::string;
 #define MAXLINE  1024
 
-namespace monitor_logic{
-
+namespace monitor_logic {
 
 } /* namespace monitor_logic */
 
