@@ -136,7 +136,6 @@ bool TaskEngine::SendHttpRequestCurl(struct TaskHead *task, string &url,
         }
 
         curl_easy_cleanup(curl);
-
         return true;
     }
 
@@ -745,7 +744,6 @@ bool TaskTaoGuBaEngine::HandlerPostArg(struct TaskHead *task, string &str_url,
 }
 
 void TaskTaoGuBaEngine::AssembleRequestHeader(struct curl_slist* headers) {
-
     headers = curl_slist_append(headers, "Host: www.taoguba.com.cn");
 }
 

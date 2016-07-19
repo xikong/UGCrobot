@@ -207,7 +207,12 @@ bool TaskHead::UnpackTaskHead(packet::DataInPacket *in, int &temp) {
     ReadDataByLen(this->forge_ip_, temp, in);
     ReadDataByLen(this->forge_ua_, temp, in);
 
-    LOG_DEBUG2("task_id = %d", this->task_id_); LOG_DEBUG2("cookie_id = %d", this->cookie_id_); LOG_DEBUG2("cookie = %s", this->cookie_.c_str()); LOG_DEBUG2("content = %s", this->content_.c_str()); LOG_DEBUG2("forge_ip = %s", this->forge_ip_.c_str()); LOG_DEBUG2("forge_ua = %s", this->forge_ua_.c_str());
+    LOG_DEBUG2("task_id = %d", this->task_id_);
+    LOG_DEBUG2("cookie_id = %d", this->cookie_id_);
+    LOG_DEBUG2("cookie = %s", this->cookie_.c_str());
+    LOG_DEBUG2("content = %s", this->content_.c_str());
+    LOG_DEBUG2("forge_ip = %s", this->forge_ip_.c_str());
+    LOG_DEBUG2("forge_ua = %s", this->forge_ua_.c_str());
 
     return true;
 }
