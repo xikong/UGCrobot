@@ -16,22 +16,24 @@
 
 namespace net {
 
-class PacketProsess {
+class PacketProsess{
  public:
 
-    static void UnpackOpcode(int &opcode,
-            const void *packet_stream, const int len);
+    static void UnpackOpcode(int &opcode, const void *packet_stream,
+                             const int len );
 
-    static void IsZipPacket(const bool is_zip_encrypt, const int16 packet_length,
-            packet::DataOutPacket *out, void **packet_stream, int32 &packet_stream_length);
+    static void IsZipPacket(const bool is_zip_encrypt,
+                            const int16 packet_length,
+                            packet::DataOutPacket *out, void **packet_stream,
+                            int32 &packet_stream_length );
 
-    static void HexEncode(const void* bytes, size_t size);
+    static void HexEncode(const void* bytes, size_t size );
 
     static uint64 CompressionStream(const uint8* unzip_data, uint64 unzip_len,
-            uint8** zip_data);  //  压缩
+                                    uint8** zip_data );  //  压缩
 
     static uint64 DecompressionStream(const uint8* zip_data, uint64 zip_len,
-            uint8** unzip_data);  //  解压缩
+                                      uint8** unzip_data );  //  解压缩
 };
 
 } /* namespace packet */

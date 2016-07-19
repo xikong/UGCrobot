@@ -94,12 +94,27 @@ robot_check_logic.o : ./robot_check_logic.cc ./robot_check_logic.h
 robot_check_engine.o : ./robot_check_engine.cc ./robot_check_engine.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_check_engine.cc $(INCLUDE_PATHS)
 	
+robot_check_db.o : ./robot_check_db.cc ./robot_check_db.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_check_db.cc $(INCLUDE_PATHS)
+	
 task_factory.o :  $(USER_DIR)/task/task_factory.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/task/task_factory.cc $(INCLUDE_PATHS)
 
 task_engine.o :  $(USER_DIR)/task/task_engine.cc $(USER_DIR)/task/task_engine.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/task/task_engine.cc $(INCLUDE_PATHS)
+	
+mem_controller.o :  $(USER_DIR)/storage/mem_controller.cc $(USER_DIR)/storage/mem_controller.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/storage/mem_controller.cc $(INCLUDE_PATHS)
 
+mysql_controller.o :  $(USER_DIR)/storage/mysql_controller.cc $(USER_DIR)/storage/mysql_controller.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/storage/mysql_controller.cc $(INCLUDE_PATHS)
+	
+redis_controller.o :  $(USER_DIR)/storage/redis_controller.cc $(USER_DIR)/storage/redis_controller.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/storage/redis_controller.cc $(INCLUDE_PATHS)
+	
+storage_controller_engine.o :  $(USER_DIR)/storage/storage_controller_engine.cc $(USER_DIR)/storage/storage_controller_engine.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/storage/storage_controller_engine.cc $(INCLUDE_PATHS)
+	
 packet_define.o :  $(USER_DIR)/net/packet_define.cc $(USER_DIR)/net/packet_define.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/net/packet_define.cc $(INCLUDE_PATHS)
 	
@@ -146,7 +161,8 @@ zip.o:$(LIB_DIR)/public/basic/zip.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(LIB_DIR)/public/basic/zip.cc $(INCLUDE_PATHS)
 
 
-$(PLUGIN) : robot_check_init.o robot_check_logic.o robot_check_engine.o packet_processing.o logic_unit.o\
+$(PLUGIN) : robot_check_init.o robot_check_logic.o robot_check_engine.o robot_check_db.o \
+	mem_controller.o mysql_controller.o redis_controller.o storage_controller_engine.o packet_processing.o logic_unit.o\
 	task_factory.o task_engine.o packet_define.o logic_pub_comm.o\
 	mig_log.o basictypes.o basic_util.o config.o \
 	md5sum.o radom_in.o data_packet.o native_library.o tea.o unzip.o zip.o\

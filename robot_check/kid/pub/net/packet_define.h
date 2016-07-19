@@ -32,8 +32,8 @@ using std::string;
 
 struct PacketHeadHex{
     int16 packet_length;    //整个包的长度
-    int8  is_zip_encrypt;   //是否压缩
-    int8  type;             //类型
+    int8 is_zip_encrypt;   //是否压缩
+    int8 type;             //类型
     int16 checksum;         //检验包的值
     int16 operate_code;     //操作码
     int16 bodylen;          //包体长度
@@ -53,14 +53,14 @@ struct PacketHead{
 
     PacketHead();
     virtual ~PacketHead();
-    bool PackHead(const int32 packet_length);
-    bool UnpackHead(const void* packet_stream, int32 len);
+    bool PackHead(const int32 packet_length );
+    bool UnpackHead(const void* packet_stream, int32 len );
 
-    virtual bool PackStream(void **packet_stream, int32 &packet_stream_length);
+    virtual bool PackStream(void **packet_stream, int32 &packet_stream_length );
 
     int16 packet_length_;
-    int8  is_zip_encrypt_;
-    int8  type_;
+    int8 is_zip_encrypt_;
+    int8 type_;
     int16 signature_;
     int16 operate_code_;
     int16 data_length_;
@@ -80,153 +80,152 @@ struct PacketHead{
 #define ROBOT_REGISTER_INFO_SIZE (PACKET_HEAD_LENGTH + sizeof(int16) + PASSWORD_SIZE - 1 + MAC_SIZE - 1)
 struct RobotRegisterInfo : public PacketHead{
 
-    virtual bool PackStream(void **packet_stream, int32 &packet_stream_length);
+    virtual bool PackStream(void **packet_stream, int32 &packet_stream_length );
 
-    int16       level;
-    char        passwd[PASSWORD_SIZE];
-    char        mac[MAC_SIZE];
+    int16 level;
+    char passwd[PASSWORD_SIZE];
+    char mac[MAC_SIZE];
 };
-
 
 //Robot 注册结果
 struct RobotRegisterSuccess : public PacketHead{
 
-    bool UnpackStream(const void *packet_stream, int32 len);
+    bool UnpackStream(const void *packet_stream, int32 len );
 
-    char    router_ip[IP_SIZE];     //router地址
-    int16   router_port;            //router端口
-    char    token[TOKEN_SIZE];      //分配的唯一token
+    char router_ip[IP_SIZE];     //router地址
+    int16 router_port;            //router端口
+    char token[TOKEN_SIZE];      //分配的唯一token
 };
 
 // Robot 请求登录 Router
 #define REG_LOGIN_ROUTER_SIZE (PACKET_HEAD_LENGTH + TOKEN_SIZE - 1)
 struct RobotRequestLoginRouter : public PacketHead{
 
-    virtual bool PackStream(void **packet_stream, int32 &packet_stream_length);
+    virtual bool PackStream(void **packet_stream, int32 &packet_stream_length );
 
-    char    token[TOKEN_SIZE];
+    char token[TOKEN_SIZE];
 };
 
 // 登录router结果
 struct RobotLoginRouterResult : public PacketHead{
 
-    bool UnpackStream(const void *packet_stream, int32 len);
+    bool UnpackStream(const void *packet_stream, int32 len );
 
-    int8        is_success;
+    int8 is_success;
 };
 
 // Robot状态包
 #define ROBOT_STATE_SIZE (PACKET_HEAD_LENGTH + sizeof(int32) * 2)
 struct RobotStatePacket : public PacketHead{
 
-    virtual bool PackStream(void **packet_stream, int32 &packet_stream_length);
+    virtual bool PackStream(void **packet_stream, int32 &packet_stream_length );
 
-    int32       max_task_num;
-    int32       curr_task_num;
+    int32 max_task_num;
+    int32 curr_task_num;
 };
 
 //所有任务的基类
 struct TaskHead{
 
     TaskHead()
-        : is_start_(0)
-        , is_finsh_(0)
-        , feed_server_id_(0)
-        , retry_times_(0){
+            : is_start_(0),
+              is_finsh_(0),
+              feed_server_id_(0),
+              retry_times_(0) {
     }
 
-    virtual ~TaskHead(){
+    virtual ~TaskHead() {
     }
 
-    bool UnpackTaskHead(packet::DataInPacket *in, int &temp);
+    bool UnpackTaskHead(packet::DataInPacket *in, int &temp );
 
-    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp) = 0;
+    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp ) = 0;
 
-    int32       feed_server_id_;
-    int64       task_id_;
-    uint16      task_type_;
-    int8        is_start_;
-    int8        is_finsh_;
-    int8        retry_times_;
-    int64       cookie_id_;
-    string      cookie_;
-    string      content_;
-    string      forge_ip_;
-    string      forge_ua_;
-    string      pre_url_;
+    int32 feed_server_id_;
+    int64 task_id_;
+    uint16 task_type_;
+    int8 is_start_;
+    int8 is_finsh_;
+    int8 retry_times_;
+    int64 cookie_id_;
+    string cookie_;
+    string content_;
+    string forge_ip_;
+    string forge_ua_;
+    string pre_url_;
 };
 
 //微博任务
 struct TaskWeiBoPacket : public TaskHead{
-    string      topic_id_;
-    string      host_uin_;
+    string topic_id_;
+    string host_uin_;
 
-    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
+    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp );
 };
 
 //bbs天涯
 struct TaskTianYaPacket : public TaskHead{
-    uint64      pre_post_time_;
-    string      pre_title_;
-    string      pre_user_id_;
-    string      pre_user_name_;
+    uint64 pre_post_time_;
+    string pre_title_;
+    string pre_user_id_;
+    string pre_user_name_;
 
-    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
+    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp );
 };
 
 //贴吧任务
 struct TaskTieBaPacket : public TaskHead{
-    string      kw_;
-    string      fid_;
-    string      tbs_;
-    int32       floor_num_;
-    string      repost_id_;
+    string kw_;
+    string fid_;
+    string tbs_;
+    int32 floor_num_;
+    string repost_id_;
 
-    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
+    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp );
 };
 
 //QQ任务
 struct TaskQQPacket : public TaskHead{
-    uint64      host_uin_;
-    string      topic_id_;
+    uint64 host_uin_;
+    string topic_id_;
 
-    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
+    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp );
 };
 
 //猫扑任务
 struct TaskMopPacket : public TaskHead{
-    string      pCatId_;
-    string      catalogId_;
-    string      fmtoken_;
-    string      currformid_;
+    string pCatId_;
+    string catalogId_;
+    string fmtoken_;
+    string currformid_;
 
-    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
+    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp );
 };
 
 //豆瓣任务
 struct TaskDouBanPacket : public TaskHead{
 
-    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp);
+    virtual bool UnpackTaskBody(packet::DataInPacket *in, int &temp );
 };
 
 //收到服务器分配的任务
 struct MultiTaskList : public PacketHead{
 
-    std::list<struct TaskHead *>    multi_task_list_;
+    std::list<struct TaskHead *> multi_task_list_;
 
-    bool UnpackStream(const void *packet_stream, int32 len);
+    bool UnpackStream(const void *packet_stream, int32 len );
 };
 
 #define FEEDBACK_TASK_STATUS_SIZE   (PACKET_HEAD_LENGTH + sizeof(int8) + sizeof(int64) * 2)
 struct FeedBackTaskStatus : public PacketHead{
-    int16       task_type;
-    int8        is_success;
-    int64       task_id;
-    int64       cookie_id;
+    int16 task_type;
+    int8 is_success;
+    int64 task_id;
+    int64 cookie_id;
 
-    virtual bool PackStream(void **packet_stream, int32 &packet_stream_length);
+    virtual bool PackStream(void **packet_stream, int32 &packet_stream_length );
 };
 
-static bool ReadDataByLen(string &data, int &temp, packet::DataInPacket *in);
+static bool ReadDataByLen(string &data, int &temp, packet::DataInPacket *in );
 
 #endif /* UGCROBOT_MASTER_PUB_NET_PACKET_DEFINE_H_ */
