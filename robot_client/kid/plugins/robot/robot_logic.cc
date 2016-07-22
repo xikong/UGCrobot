@@ -531,12 +531,12 @@ void RobotLogic::BackUpLogFileTimer() {
         //执行备份
         commond = "cp -f nohup.out " + logic::SomeUtils::GetBackUpFileName();
         fp = popen(commond.c_str(), "r");
-        fclose(fp);
+        pclose(fp);
 
         //清空nohup
         commond = "cp /dev/null nohup.out";
         fp = popen(commond.c_str(), "r");
-        fclose(fp);
+        pclose(fp);
 
         next_back_time_ += ONE_DAY_SEC;
         LOG_DEBUG2("Next BackUp LogFile Time = %d", next_back_time_);

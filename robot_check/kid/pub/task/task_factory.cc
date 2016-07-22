@@ -10,23 +10,20 @@
 
 using namespace base_logic;
 
-extern TaskEngine *GetTaskEngineByType(const int task_type){
+extern TaskEngine *GetTaskEngineByType(const int task_type ) {
 
     TaskEngine *engine = NULL;
 
-    switch(task_type){
-    case TASK_TIEBA:{
-        engine = TaskTieBaEngine::GetInstance();
-        break;
-    }
-    default:
-        LOG_MSG2("Not Suppot This TaskType = %d task", task_type);
-        break;
+    switch (task_type) {
+        case TASK_TIEBA: {
+            engine = TaskTieBaEngine::GetInstance();
+            break;
+        }
+        default:
+            LOG_MSG2("Not Suppot This TaskType = %d task", task_type);
+            break;
     }
 
     return engine;
 }
-
-
-
 
