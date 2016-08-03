@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
     <srv_config bindhost="222.73.34.92"
-                port="19568"
+                port="19650"
                 path="/var/www/tmp/corefile_16001"/>
 
     <log_config usr_file="/home/kerry/rounter/bin/user.log"

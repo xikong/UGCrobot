@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin id="mail"
+        name="mail"
+        version="1.0.0"
+        provider-name="Harvey">
+</plugin>

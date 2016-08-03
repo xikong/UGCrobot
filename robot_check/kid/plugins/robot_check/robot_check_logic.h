@@ -11,38 +11,36 @@
 #include "core/common.h"
 #include "basic/basictypes.h"
 
+#include "robot_check_db.h"
+#include "robot_check_header.h"
+
 #define TASK_LOG_CHECK_INTERVAL                 10001
 
 namespace robot_check_logic {
 
-class RobotCheckLogic {
- public:
-    virtual ~RobotCheckLogic();
-
-    static RobotCheckLogic *GetInstance();
-
-    static void FreeInstance();
-
-    bool OnIniTimer(struct server *srv);
-
-    bool OnTimeout(struct server *srv, char* id, int opcode, int time);
-
-    void TaskLogCheckTimer(int current_time);
-
-    void SaveRobotCheckPlugin(struct plugin *pl);
-
-    struct plugin *GetRobotCheckPlugin();
-
+class RobotCheckLogic{
  private:
     RobotCheckLogic();
-
     bool Init();
 
+ public:
+    static RobotCheckLogic *GetInstance();
+    static void FreeInstance();
+    bool OnIniTimer(struct server *srv );
+    bool OnTimeout(struct server *srv, char* id, int opcode, int time );
+    void SaveRobotCheckPlugin(struct plugin *pl );
+    struct plugin *GetRobotCheckPlugin();
+
+    bool LoadTaskFromDb();
+    void UpdateRobotTaskStatus(RobotTask &task );
+
  private:
+    string check_date_;
+    int comlete_num_;
+    int load_num_;
     static RobotCheckLogic *instance_;
-    struct plugin           *robot_check_pl_;
-    int64                   next_check_time_;
-    bool                    is_parse_finsh_;
+    scoped_ptr<RobotCheckDB> robot_check_db_;
+    struct plugin *robot_check_pl_;
 };
 
 } /* namespace robot_check_logic */
