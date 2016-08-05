@@ -10,6 +10,7 @@
 #include "logic/logic_unit.h"
 #include "basic/radom_in.h"
 #include "crawler_task_logic.h"
+#include "kw_blacklist.h"
 
 #define DEFAULT_CONFIG_PATH     "./plugins/tieba_task/tieba_task_config.xml"
 
@@ -44,6 +45,8 @@ bool CrawlerTasklogic::Init() {
 
   config_ = Config::GetConfig();
   config_->Print();
+
+  KwBlacklist::GetKwBlacklist()->FetchBlackKws(task_db_.get());
 
   std::string cralwer_library = "./crawler_schduler/crawler_schduler.so";
   std::string cralwer_func = "GetRouterSchdulerEngine";
@@ -87,6 +90,7 @@ bool CrawlerTasklogic::Startup() {
       TaskSchdulerEngine::GetTaskSchdulerManager();
   task_schedule_manager->InitManagerInfo(session_mgr_);
   task_time_mgr_.get()->SetSessionMgr(session_mgr_);
+  return true;
 }
 
 void CrawlerTasklogic::InitTask(
@@ -122,8 +126,8 @@ bool CrawlerTasklogic::HandleAllMessage(struct server *srv, const int socket,
     LOG_MSG("wait server start up");
     return false;
   }
-  base_logic::MLockGd lk(session_mgr_->lock_);
-  if (!session_mgr_->GetServer()->is_valid()) {
+
+  if (!session_mgr_->ServerIsValid()) {
     LOG_MSG("server has not registered success, don't process any request");
     return false;
   }
@@ -223,7 +227,7 @@ bool CrawlerTasklogic::OnBroadcastClose(struct server *srv, const int socket) {
 
 bool CrawlerTasklogic::OnIniTimer(struct server *srv) {
   if (srv->add_time_task != NULL) {
-    srv->add_time_task(srv, "tieba_task", TIMER_SERVER_STARTUP, 1, 1);
+    srv->add_time_task(srv, "tieba_task", TIMER_SERVER_STARTUP, 2, 1);
 
     srv->add_time_task(srv, "tieba_task", TIME_DISTRIBUTION_TASK,
                        config_->assign_task_tick, -1);
@@ -246,6 +250,9 @@ bool CrawlerTasklogic::OnIniTimer(struct server *srv) {
                        config_->reply_self_state_tick, -1);
 
     srv->add_time_task(srv, "tieba_task", TIME_FETCH_IP, config_->fetch_ip_tick,
+                       -1);
+
+    srv->add_time_task(srv, "tieba_task", TIME_FETCH_BLACK_KW, config_->fetch_black_kw_tick,
                        -1);
   }
   return true;

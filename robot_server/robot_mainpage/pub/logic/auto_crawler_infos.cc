@@ -179,6 +179,7 @@ void ForgeryIP::ValueSerialization(base_logic::DictionaryValue* dict) {
     dict->GetCharInteger(L"type", &data_->type_);
     dict->GetString(L"ip", &data_->ip_);
     dict->GetString(L"create_time", &data_->create_time_);
+    dict->GetBigInteger(L"attr_id", &data_->attr_id_);
 }
 
 ForgeryUA::ForgeryUA() {
@@ -367,13 +368,24 @@ void LoginCookie::ValueSerialization(base_logic::DictionaryValue* dict) {
 }
 
 void RobotTask::GetDataFromKafka(base_logic::DictionaryValue* dict) {
-	std::string str;
-	dict->GetString(L"timestamp", &str);
-	base::BasicUtil::StringUtil::StringToInt64(str, &create_time_);
+  std::string str;
+  dict->GetString(L"timestamp", &str);
+  base::BasicUtil::StringUtil::StringToInt64(str, &create_time_);
+  int64 tmp;
+  if (!dict->GetBigInteger(L"method", &tmp)) {
+    method_ = 2;
+  } else {
+    method_ = (int8) tmp;
+  }
+//  LOG_DEBUG2("tmp = %lld, method = %d", tmp, method_);
 }
 
 void RobotTask::ValueSerialization(base_logic::DictionaryValue* dict) {
     dict->GetBigInteger(L"id", &id_);
+    int64 tmp;
+    dict->GetBigInteger(L"method", &tmp);
+    if (0 == method_) method_ = (int8)tmp;
+//    LOG_DEBUG2("tmp = %lld, method = %d", tmp, method_);
 }
 
 std::string RobotTask::SerializeSelf() {
@@ -431,22 +443,24 @@ std::string TianyaTask::SerializeSelf() {
 	return os.str();
 }
 
-TiebaTask::TypeQueue TiebaTask::type_queue_;
+TiebaTask::TypeList TiebaTask::type_list_;
 
 void TiebaTask::GetDataFromKafka(base_logic::DictionaryValue *dict) {
 //	id_ = base::SysRadom::GetInstance()->GetRandomIntID();
-	RobotTask::GetDataFromKafka(dict);
-	dict->GetString(L"url", &url_);
-	dict->GetString(L"cookie", &cookie_);
-	dict->GetString(L"id", &row_key_);
-	std::string str;
-	dict->GetString(L"attrid", &str);
-	type_ = atoll(str.c_str());
-//	int64 task_type;
-//	dict->GetBigInteger(L"attrid", &task_type);
-//	type_ = (TaskType)task_type;
-//	LOG_DEBUG2("str_task_type = %s, task_type = %lld",
-//			str.c_str(), type_);
+  RobotTask::GetDataFromKafka(dict);
+  dict->GetString(L"url", &url_);
+  dict->GetString(L"cookie", &cookie_);
+  dict->GetString(L"url", &row_key_);
+  std::string str;
+  dict->GetString(L"attrid", &str);
+  type_ = atoll(str.c_str());
+  if (TIEBA == type_) {
+    if (std::string::npos != url_.find("http://tieba.baidu.com/p/")) {
+      set_sub_type(FINAL);
+    } else {
+      set_sub_type(MIDDLE);
+    }
+  }
 }
 
 std::string TiebaTask::SerializeSelf() {

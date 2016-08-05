@@ -4,12 +4,15 @@
 #include <list>
 #include "task_time_manager.h"
 #include "logic/logic_unit.h"
+#include "forgery_ip_engine.h"
+#include "kw_blacklist.h"
 
 namespace tieba_task_logic {
 
 TaskTimeManager::TaskTimeManager(tieba_task_logic::CrawlerTaskDB* task_db) {
   schduler_mgr_ =
       tieba_task_logic::TaskSchdulerEngine::GetTaskSchdulerManager();
+  ip_mgr_ = ForgeryIPEngine::GetForgeryIPManager();
   task_db_.reset(task_db);
   session_mgr_ = NULL;
 }
@@ -26,8 +29,7 @@ void TaskTimeManager::TaskTimeEvent(int opcode, int time) {
     LOG_MSG("wait server start up");
     return;
   }
-  base_logic::MLockGd lk(session_mgr_->lock_);
-  if (!session_mgr_->GetServer()->is_valid()) {
+  if (!session_mgr_->ServerIsValid()) {
     LOG_MSG("server has not registered success, don't process time event");
     return;
   }
@@ -54,7 +56,10 @@ void TaskTimeManager::TaskTimeEvent(int opcode, int time) {
       UpdateExecTasks();
       break;
     case TIME_FETCH_IP:
-      schduler_mgr_->FetchIP();
+      ip_mgr_->FetchForgeryIPs();
+      break;
+    case TIME_FETCH_BLACK_KW:
+      KwBlacklist::GetKwBlacklist()->FetchBlackKws(task_db_.get());
       break;
     default:
       break;
@@ -65,7 +70,6 @@ void TaskTimeManager::UpdateExecTasks() {
   if (NULL == session_mgr_) {
     return ;
   }
-  base_logic::MLockGd lk(session_mgr_->lock_);
   session_mgr_->GetServer()->set_busy_tasks(schduler_mgr_->GetExecTasks());
 }
 
@@ -81,7 +85,7 @@ void TaskTimeManager::TimeFetchTask() {
 void TaskTimeManager::TimeFechMainTask() {
   std::list<base_logic::TiebaTask> list;
   task_db_->FecthBatchTask(&list);
-  schduler_mgr_->FetchBatchTask(&list);
+  schduler_mgr_->FetchMainTask(&list);
 }
 
 void TaskTimeManager::TimeCheckTask() {

@@ -89,6 +89,12 @@ crawler_task_init.o : ./crawler_task_init.cc ./crawler_task_init.h
 robot_config.o : ./robot_config.cc ./robot_config.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./robot_config.cc $(INCLUDE_PATHS)
 
+kw_blacklist.o : ./kw_blacklist.cc ./kw_blacklist.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./kw_blacklist.cc $(INCLUDE_PATHS)
+
+forgery_ip_engine.o : ./forgery_ip_engine.cc ./forgery_ip_engine.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./forgery_ip_engine.cc $(INCLUDE_PATHS)
+
 crawler_task_logic.o : ./crawler_task_logic.cc ./crawler_task_logic.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c ./crawler_task_logic.cc $(INCLUDE_PATHS)
 
@@ -162,7 +168,7 @@ zip.o:$(LIB_DIR)/public/basic/zip.cc
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(LIB_DIR)/public/basic/zip.cc $(INCLUDE_PATHS)
 	
 
-$(PLUGIN) : crawler_task_init.o robot_config.o  crawler_task_logic.o crawler_task_db.o crawler_task_kafka.o task_schduler_engine.o task_time_manager.o session_engine.o\
+$(PLUGIN) : crawler_task_init.o robot_config.o kw_blacklist.o forgery_ip_engine.o crawler_task_logic.o crawler_task_db.o crawler_task_kafka.o task_schduler_engine.o task_time_manager.o session_engine.o\
 	packet_processing.o logic_unit.o auto_crawler_infos.o mem_controller.o mysql_controller.o\
 	redis_controller.o storage_controller_engine.o\
 	mig_log.o basictypes.o basic_util.o config.o md5sum.o radom_in.o data_packet.o native_library.o tea.o unzip.o zip.o\

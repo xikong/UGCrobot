@@ -2,11 +2,13 @@
 //  Created on: 2015年9月23日 Author: kerry
 
 #include <string>
+#include <sstream>
 #include "logic/logic_comm.h"
 #include "logic/logic_unit.h"
 #include "basic/template.h"
 #include "basic/radom_in.h"
 #include "task_schduler_engine.h"
+#include "forgery_ip_engine.h"
 
 namespace tieba_task_logic {
 
@@ -19,33 +21,32 @@ TaskSchdulerManager::TaskSchdulerManager() :
 		crawler_count_(0), task_db_(NULL), session_mgr_(NULL) {
 	task_cache_ = new TaskSchdulerCache();
 	cookie_cache_ = new CookieCache();
-	ip_cache_ = new IPCache();
+	ip_cache_ = ForgeryIPEngine::GetForgeryIPManager();
 	ua_cache_ = new ForgeryUACache();
+	kw_blacklist_ = KwBlacklist::GetKwBlacklist();
 	Init();
 }
 
 TaskSchdulerManager::~TaskSchdulerManager() {
 	DeinitThreadrw(lock_);
+  base::SysRadom::GetInstance()->DeinitRandom();
 }
 
 void TaskSchdulerManager::Init() {
 	InitThreadrw(&lock_);
+  base::SysRadom::GetInstance()->InitRandom();
 }
 
 void TaskSchdulerManager::InitDB(tieba_task_logic::CrawlerTaskDB* task_db) {
 	task_db_ = task_db;
-	task_db_->FectchBatchForgeryIP(&ip_cache_->ip_list_);
+	ip_cache_->Init(task_db);
 	task_db_->FectchBatchForgeryUA(&ua_cache_->ua_list_);
-	LOG_MSG2("forgery ip size: %d, forgery ua size: %d",
-			ip_cache_->ip_list_.size(), ua_cache_->ua_list_.size());
+	LOG_MSG2("forgery ua size: %d", ua_cache_->ua_list_.size());
 	SetBatchCookies();
-}
 
-void TaskSchdulerManager::FetchIP() {
-  base_logic::WLockGd lk(lock_);
-  ip_cache_->ip_list_.clear();
-  task_db_->FectchBatchForgeryIP(&ip_cache_->ip_list_);
-  LOG_DEBUG2("forgery ip size: %d", ip_cache_->ip_list_.size());
+  std::list<base_logic::TiebaTask> list;
+  task_db_->FecthBatchTask(&list);
+  FetchMainTask(&list);
 }
 
 void TaskSchdulerManager::Init(
@@ -75,8 +76,8 @@ void TaskSchdulerManager::SetCookie(const base_logic::LoginCookie& info) {
 	for (CookieList::iterator it = list.begin(); it != list.end();) {
 		if (info.get_username() == it->get_username()
 				&& info.get_passwd() == it->get_passwd()) {
-			LOG_MSG2("erase old cookie username=%s passwd=%s",
-					info.get_username().c_str(), info.get_passwd());
+//			LOG_MSG2("erase old cookie username=%s passwd=%s",
+//					info.get_username().c_str(), info.get_passwd());
 			list.erase(it++);
 			break;
 		} else {
@@ -107,7 +108,6 @@ void TaskSchdulerManager::FetchBatchTask(std::list<base_logic::TiebaTask> *list,
 	base_logic::WLockGd lk(lock_);
 
 //    cookie_cache_->SortCookies();
-	ip_cache_->SortIPBySendTime();
 	ua_cache_->SortUABySendTime();
 
 	time_t current_time = time(NULL);
@@ -119,40 +119,49 @@ void TaskSchdulerManager::FetchBatchTask(std::list<base_logic::TiebaTask> *list,
 					info.url().c_str(), current_time, info.create_time());
 			continue;
 		}
+
+		if (kw_blacklist_->IsBlackKw(info.url())) {
+		  LOG_MSG2("%s is in kw black list", info.url().c_str());
+		  continue;
+		}
+
 		base_logic::ForgeryIP ip;
 		base_logic::ForgeryUA ua;
-		ip_cache_->GetIP(ip);
+		ip_cache_->GetIPByAttrId(info.type(), ip);
 		ua_cache_->GetUA(ua);
 		info.set_addr(ip.ip());
 		info.set_ua(ua.ua());
 
-		base::SysRadom::GetInstance()->InitRandom();
 		info.update_time(current_time,
 				base::SysRadom::GetInstance()->GetRandomID(), is_first);
 		info.set_id(base::SysRadom::GetInstance()->GetRandomID());
-//        task_cache_->task_idle_list_[info.id()] = info;
-		LOG_DEBUG2("fetch task, task_type = %lld, task_idle_list.size() = %d",
-				info.type(), task_cache_->task_idle_list_.size());
-//		if (info.is_main_task()) {
-//			task_cache_->task_idle_list_.remove_if(IsMainTask);
-//			LOG_DEBUG2("after remove main tasks, task_idle_list.size() = %d",
-//					task_cache_->task_idle_list_.size());
-//		}
-		task_cache_->task_idle_list_.push_back(info);
-		base::SysRadom::GetInstance()->DeinitRandom();
+
+		TaskList &list = task_cache_->pending_task_map_[info.type()];
+		list.attr_id_ = info.type();
+		list.push_back(info);
 	}
 }
 
-void TaskSchdulerManager::FetchBatchTemp(
+void TaskSchdulerManager::FetchMainTask(
 		std::list<base_logic::TiebaTask>* list) {
-#if 0
-	base_logic::WLockGd lk(lock_);
-	while ((*list).size() > 0) {
-		base_logic::TiebaTask info = (*list).front();
-		(*list).pop_front();
-		task_cache_->task_temp_list_.push_back(info);
-	}
-#endif
+  base_logic::WLockGd lk(lock_);
+
+  ua_cache_->SortUABySendTime();
+  task_cache_->ClearMainTask();
+  time_t current_time = time(NULL);
+  while ((*list).size() > 0) {
+    base_logic::TiebaTask info = (*list).front();
+    (*list).pop_front();
+    base_logic::ForgeryIP ip;
+    base_logic::ForgeryUA ua;
+    ip_cache_->GetIPByAttrId(info.type(), ip);
+    ua_cache_->GetUA(ua);
+    info.set_addr(ip.ip());
+    info.set_ua(ua.ua());
+    TaskList &list = task_cache_->pending_task_map_[info.type()];
+    list.attr_id_ = info.type();
+    list.push_main_task(info);
+  }
 }
 
 bool TaskSchdulerManager::AlterTaskState(const int64 task_id, const int state) {
@@ -198,71 +207,103 @@ void TaskSchdulerManager::RecyclingTask() {
 	} LOG_DEBUG2("task_exec_map size = %d", task_cache_->task_exec_map_.size());
 }
 
-bool TaskSchdulerManager::DistributionTempTask() {
-	/*
-	 LOG_MSG2("task_temp_list_ size %d", task_cache_->task_temp_list_.size());
-	 if (task_cache_->task_temp_list_.size() <= 0)
-	 return true;
-	 if (!crawler_schduler_engine_->CheckOptimalRouter()) {
-	 LOG_MSG("no have OptimalCrawler");
-	 return true;
-	 }
-	 int32 base_num = 5;
-	 struct AssignmentMultiTask  task;
-	 int data_length = 0;
-	 MAKE_HEAD(task, ASSIGNMENT_MULTI_TASK, 0, 0, 0,0, 0,0 , 0, 0);
-	 int crawler_type = task_db_->GetCrawlerTypeByOpCode(ASSIGNMENT_MULTI_TASK);
-	 LOG_DEBUG2("DistributionTempTask: crawler type = %d", crawler_type);
-	 base_logic::WLockGd lk(lock_);
+bool TaskSchdulerManager::DistributionTask() {
+  if (NULL == session_mgr_) {
+    LOG_MSG("wait server start up");
+    return false;
+  }
+  base_logic::WLockGd lk(lock_);
+  plugin_share::ServerSession *srv_session = session_mgr_->GetServer();
+  int32 base_num = 1;
+  int data_length = 0;
+  time_t current_time = time(NULL);
+  LOG_DEBUG2("distrubute tieba task current_time=%d task_cache_size=%d",
+      (int)current_time, task_cache_->size());
+  if (task_cache_->size() <= 0) {
+    return true;
+  }
 
-	 while (task_cache_->task_temp_list_.size() > 0) {
-	 base_logic::TaskInfo info = task_cache_->task_temp_list_.front();
-	 task_cache_->task_temp_list_.pop_front();
-	 task_db_->RecordTaskState(info, 1);
-	 if ((info.state() == TASK_WAIT || info.state() == TASK_EXECUED)) {
-	 struct TaskUnit* unit = new struct TaskUnit;
-	 unit->task_id = info.id();
-	 unit->attr_id = info.attrid();
-	 unit->max_depth = info.depth();
-	 unit->current_depth = info.cur_depth();
-	 unit->machine = info.machine();
-	 unit->storage = info.storage();
-	 unit->is_login = info.is_login();
-	 unit->is_over = info.is_over();
-	 unit->is_forge = info.is_forge();
-	 unit->method = info.method();
+  struct AssignTiebaTask task;
+  MAKE_HEAD(task, ASSIGN_TIEBA_TASK, 0, 0, 0, 0, 0, srv_session->server_type(),
+      srv_session->id(), 0);
+  int crawler_type = task_db_->GetCrawlerTypeByOpCode(ASSIGN_TIEBA_TASK);
+  LOG_DEBUG2("crawler type = %d, get from mysql", crawler_type);
+  if (!crawler_schduler_engine_->CheckOptimalRouter(crawler_type)) {
+    LOG_MSG2("no have OptimalCrawler with type: %d", crawler_type);
+    return true;
+  }
 
-	 memset(unit->url, '\0', URL_SIZE);
-	 size_t url_len = (URL_SIZE - 1) < info.url().length() ?  (URL_SIZE - 1) : info.url().length();
-	 memcpy(unit->url, info.url().c_str(), url_len);
+  task_cache_->PrintTaskDetail();
 
-	 unit->len = TASK_UNIT_SIZE + url_len;
-	 data_length += unit->len;
+  cookie_cache_->SortCookies();
+  base_logic::TiebaTask info;
+  while (task_cache_->GetTask(info)) {
+    base_logic::LoginCookie cookie;
 
-	 task.task_set.push_back(unit);
-	 info.set_state(TASK_SEND);
-	 task_cache_->task_exec_map_[info.id()] = info;
-	 if (task.task_set.size() % base_num == 0 &&
-	 task.task_set.size() != 0) {
-	 task.packet_length = task.data_length = data_length;
-	 data_length = 0;
-	 crawler_schduler_engine_->SendOptimalRouter((const void*)&task, 0, crawler_type);
-	 net::PacketProsess::ClearCrawlerTaskList(&task);
-	 }
-	 }
-	 }
+    if (TASK_SEND_FAILED == info.state()) {
+      task_db_->UpdateRobotTaskState(info.id(), TASK_SEND);
+    } else {
+      info.set_state(TASK_SEND);
+      task_db_->RecordRobotTaskState(info);
+    }
+    if (FilterTask(info)) {
+//      task_cache_->task_idle_list_.erase(it++);
+      info.set_state(TASK_INVALID);
+      continue;
+    }
 
-	 //解决余数
-	 if (task.task_set.size() > 0) {
-	 task.packet_length = task.data_length = data_length;
-	 data_length = 0;
-	 crawler_schduler_engine_->SendOptimalRouter((const void*)&task, 0, crawler_type);
-	 net::PacketProsess::ClearCrawlerTaskList(&task);
-	 }
+    struct TiebaTaskUnit *unit = new TiebaTaskUnit();
+    if (0 == info.cookie().size()
+        && cookie_cache_->GetCookie(info.type(), cookie)) {
+      unit->cookie_id = cookie.cookie_id();
+      unit->cookie = cookie.get_cookie_body();
+    } else {
+      unit->cookie_id = 0;
+      unit->cookie = info.cookie();
+    }
+    LOG_MSG2("DistributionTask task_type = %lld, task_id=%d", info.type(), info.id());
+    //struct TaskUnit* unit = new struct TaskUnit;
+    unit->task_id = info.id();
+    unit->method = info.method();
+//    unit->task_type = info.type();
+    unit->task_type = info.type();
+    unit->addr = info.addr();
+    unit->ua = info.ua();
+    unit->url = info.url();
+    unit->row_key = info.row_key();
+    unit->task_len = TIEBA_TASK_UNIT_SIZE + unit->cookie.size()
+        + unit->addr.size() + unit->ua.size() + unit->url.size()
+        + unit->row_key.size();
+    task.task_set.push_back(unit);
+    info.set_send_time((int32) current_time);
 
-	 LOG_MSG2("task_temp_list_ size %d", task_cache_->task_temp_list_.size());
-	 return true;
-	 */
+    task_cache_->task_exec_map_[info.id()] = info;
+
+    if (task.task_set.size() % base_num == 0 && task.task_set.size() != 0) {
+      task.tasks_num = base_num;
+      task.packet_length = task.data_length = data_length;
+      data_length = 0;
+      bool send_success = crawler_schduler_engine_->SendOptimalRouter(
+          (const void*) &task, 0, crawler_type);
+      net::PacketProsess::ClearTiebaTaskList(&task);
+      // 一次只发一个包
+      break;
+    }
+  }
+
+  //解决余数
+  if (task.task_set.size() > 0) {
+    task.tasks_num = task.task_set.size();
+    task.packet_length = task.data_length = data_length;
+    data_length = 0;
+    bool send_success = crawler_schduler_engine_->SendOptimalRouter((const void*) &task, 0,
+        crawler_type);
+    net::PacketProsess::ClearTiebaTaskList(&task);
+  }
+
+  LOG_DEBUG2("after distribution task, task_cache size = %d",
+      task_cache_->size());
+  return true;
 }
 
 bool TaskSchdulerManager::FilterTask(base_logic::TiebaTask &task) {
@@ -285,141 +326,141 @@ bool TaskSchdulerManager::FilterTask(base_logic::TiebaTask &task) {
 	return ret;
 }
 
-bool TaskSchdulerManager::DistributionTask() {
-	if (NULL == session_mgr_) {
-		LOG_MSG("wait server start up");
-		return false;
-	}
-	base_logic::MLockGd lock(session_mgr_->lock_);
-	plugin_share::ServerSession *srv_session = session_mgr_->GetServer();
-	int32 base_num = 1;
-	int data_length = 0;
-	time_t current_time = time(NULL);
-	LOG_DEBUG2("distrubute tieba task current_time=%d task_cache_->task_idle_map_.size=%d",
-			(int)current_time, task_cache_->task_idle_list_.size());
-	if (task_cache_->task_idle_list_.size() <= 0) {
-		return true;
-	}
-
-	cookie_cache_->SortCookies();
-
-	struct AssignTiebaTask task;
-	MAKE_HEAD(task, ASSIGN_TIEBA_TASK, 0, 0, 0, 0, 0, srv_session->server_type(),
-			srv_session->id(), 0);
-	int crawler_type = task_db_->GetCrawlerTypeByOpCode(ASSIGN_TIEBA_TASK);
-	LOG_DEBUG2("crawler type = %d, get from mysql", crawler_type);
-	if (!crawler_schduler_engine_->CheckOptimalRouter(crawler_type)) {
-		LOG_MSG2("no have OptimalCrawler with type: %d", crawler_type);
-		return true;
-	}
-
-	base_logic::WLockGd lk(lock_);
-	int32 count = task_cache_->task_idle_list_.size();
-	int32 index = 0;
-	TASKINFO_LIST::iterator it = task_cache_->task_idle_list_.begin();
-	TASKINFO_LIST::iterator packet_start = it;
-	for (; it != task_cache_->task_idle_list_.end(), index < count; index++) {
-		base_logic::LoginCookie cookie;
-		base_logic::TiebaTask& info = *it++;
-		if (info.type_queue_.front() != info.type()) {
-		  continue;
-		}
-		if (info.create_time()+30*60 < current_time) {
-			LOG_DEBUG2("task timeout, url = %s, current_time = %d, create_time = %d",
-					info.url().c_str(), current_time, info.create_time());
-			info.set_state(TASK_INVALID);
-			continue;
-		}
-		if (TASK_SEND_FAILED == info.state()) {
-			task_db_->UpdateRobotTaskState(info.id(), TASK_SEND);
-		} else {
-			info.set_state(TASK_SEND);
-			task_db_->RecordRobotTaskState(info);
-		}
-		if (FilterTask(info)) {
-//			task_cache_->task_idle_list_.erase(it++);
-			info.set_state(TASK_INVALID);
-			continue;
-		}
-
-		struct TiebaTaskUnit *unit = new TiebaTaskUnit();
-		if (0 == info.cookie().size()
-				&& cookie_cache_->GetCookie(info.type(), cookie)) {
-			unit->cookie_id = cookie.cookie_id();
-			unit->cookie = cookie.get_cookie_body();
-		} else {
-			unit->cookie_id = 0;
-			unit->cookie = info.cookie();
-		}
-		LOG_MSG2("DistributionTask task_type = %lld, task_id=%d", info.type(), info.id());
-		//struct TaskUnit* unit = new struct TaskUnit;
-		unit->task_id = info.id();
+bool TaskSchdulerManager::DistributionTempTask() {
+//	if (NULL == session_mgr_) {
+//		LOG_MSG("wait server start up");
+//		return false;
+//	}
+//  base_logic::WLockGd lk(lock_);
+//	plugin_share::ServerSession *srv_session = session_mgr_->GetServer();
+//	int32 base_num = 1;
+//	int data_length = 0;
+//	time_t current_time = time(NULL);
+//	LOG_DEBUG2("distrubute tieba task current_time=%d task_cache_->task_idle_map_.size=%d",
+//			(int)current_time, task_cache_->task_idle_list_.size());
+//	if (task_cache_->task_idle_list_.size() <= 0) {
+//		return true;
+//	}
+//
+//	struct AssignTiebaTask task;
+//	MAKE_HEAD(task, ASSIGN_TIEBA_TASK, 0, 0, 0, 0, 0, srv_session->server_type(),
+//			srv_session->id(), 0);
+//	int crawler_type = task_db_->GetCrawlerTypeByOpCode(ASSIGN_TIEBA_TASK);
+//	LOG_DEBUG2("crawler type = %d, get from mysql", crawler_type);
+//	if (!crawler_schduler_engine_->CheckOptimalRouter(crawler_type)) {
+//		LOG_MSG2("no have OptimalCrawler with type: %d", crawler_type);
+//		return true;
+//	}
+//
+//	task_cache_->PrintTaskDetail();
+//
+//	cookie_cache_->SortCookies();
+//	int32 count = task_cache_->task_idle_list_.size();
+//	int32 index = 0;
+//	TASKINFO_LIST::iterator it = task_cache_->task_idle_list_.begin();
+//	TASKINFO_LIST::iterator packet_start = it;
+//	for (; it != task_cache_->task_idle_list_.end(), index < count; index++) {
+//		base_logic::LoginCookie cookie;
+//		base_logic::TiebaTask info;
+//		if (info.type_list_.front() != info.type()) {
+//		  continue;
+//		}
+//		if (info.create_time()+30*60 < current_time) {
+//			LOG_DEBUG2("task timeout, url = %s, current_time = %d, create_time = %d",
+//					info.url().c_str(), current_time, info.create_time());
+//			info.set_state(TASK_INVALID);
+//			continue;
+//		}
+//		if (TASK_SEND_FAILED == info.state()) {
+//			task_db_->UpdateRobotTaskState(info.id(), TASK_SEND);
+//		} else {
+//			info.set_state(TASK_SEND);
+//			task_db_->RecordRobotTaskState(info);
+//		}
+//		if (FilterTask(info)) {
+////			task_cache_->task_idle_list_.erase(it++);
+//			info.set_state(TASK_INVALID);
+//			continue;
+//		}
+//
+//		struct TiebaTaskUnit *unit = new TiebaTaskUnit();
+//		if (0 == info.cookie().size()
+//				&& cookie_cache_->GetCookie(info.type(), cookie)) {
+//			unit->cookie_id = cookie.cookie_id();
+//			unit->cookie = cookie.get_cookie_body();
+//		} else {
+//			unit->cookie_id = 0;
+//			unit->cookie = info.cookie();
+//		}
+//		LOG_MSG2("DistributionTask task_type = %lld, task_id=%d", info.type(), info.id());
+//		//struct TaskUnit* unit = new struct TaskUnit;
+//		unit->task_id = info.id();
+////		unit->task_type = info.type();
 //		unit->task_type = info.type();
-		unit->task_type = info.type();
-		unit->addr = info.addr();
-		unit->ua = info.ua();
-		unit->url = info.url();
-		unit->row_key = info.row_key();
-		unit->task_len = TIEBA_TASK_UNIT_SIZE + unit->cookie.size()
-				+ unit->addr.size() + unit->ua.size() + unit->url.size()
-				+ unit->row_key.size();
-		task.task_set.push_back(unit);
-		info.set_send_time((int32) current_time);
-//		info.update_time(current_time, base::SysRadom::GetInstance()->GetRandomID());
-//		task_cache_->task_exec_map_[info.id()] = info;
-//		task_cache_->task_idle_list_.erase(it++);
-		if (task.task_set.size() % base_num == 0 && task.task_set.size() != 0) {
-			task.tasks_num = base_num;
-			task.packet_length = task.data_length = data_length;
-			data_length = 0;
-			bool send_success = crawler_schduler_engine_->SendOptimalRouter(
-					(const void*) &task, 0, crawler_type);
-			if (!send_success) {
-				for (; packet_start != it; ++packet_start) {
-					packet_start->set_state(TASK_SEND_FAILED);
-					task_db_->UpdateRobotTaskState(packet_start->id(), TASK_SEND_FAILED);
-				}
-			}
-			packet_start = it;
-			net::PacketProsess::ClearTiebaTaskList(&task);
-			// 一次只发一个包
-			break;
-		}
-	}
-	base_logic::TiebaTask::TypeQueue &type_queue = base_logic::TiebaTask::type_queue_;
-	int64 last_type = type_queue.front();
-	type_queue.pop();
-	type_queue.push(last_type);
-
-	//解决余数
-	if (task.task_set.size() > 0) {
-		task.tasks_num = task.task_set.size();
-		task.packet_length = task.data_length = data_length;
-		data_length = 0;
-		bool send_success = crawler_schduler_engine_->SendOptimalRouter((const void*) &task, 0,
-				crawler_type);
-		if (!send_success) {
-			for (; packet_start != it; ++packet_start) {
-				packet_start->set_state(TASK_SEND_FAILED);
-			}
-		}
-		net::PacketProsess::ClearTiebaTaskList(&task);
-	}
-	for (it = task_cache_->task_idle_list_.begin();
-			it != task_cache_->task_idle_list_.end();) {
-		base_logic::TiebaTask &task = *it;
-		if (TASK_INVALID == task.state()) {
-			task_cache_->task_idle_list_.erase(it++);
-		} else if (TASK_SEND == task.state()) {
-			task_cache_->task_exec_map_[task.id()] = task;
-			task_cache_->task_idle_list_.erase(it++);
-		} else {
-			++it;
-		}
-	}
-	LOG_DEBUG2("after distribution task, task_idle_list_ size = %d",
-			task_cache_->task_idle_list_.size());
-	return true;
+//		unit->addr = info.addr();
+//		unit->ua = info.ua();
+//		unit->url = info.url();
+//		unit->row_key = info.row_key();
+//		unit->task_len = TIEBA_TASK_UNIT_SIZE + unit->cookie.size()
+//				+ unit->addr.size() + unit->ua.size() + unit->url.size()
+//				+ unit->row_key.size();
+//		task.task_set.push_back(unit);
+//		info.set_send_time((int32) current_time);
+////		info.update_time(current_time, base::SysRadom::GetInstance()->GetRandomID());
+////		task_cache_->task_exec_map_[info.id()] = info;
+////		task_cache_->task_idle_list_.erase(it++);
+//		if (task.task_set.size() % base_num == 0 && task.task_set.size() != 0) {
+//			task.tasks_num = base_num;
+//			task.packet_length = task.data_length = data_length;
+//			data_length = 0;
+//			bool send_success = crawler_schduler_engine_->SendOptimalRouter(
+//					(const void*) &task, 0, crawler_type);
+//			if (!send_success) {
+//				for (; packet_start != it; ++packet_start) {
+//					packet_start->set_state(TASK_SEND_FAILED);
+//					task_db_->UpdateRobotTaskState(packet_start->id(), TASK_SEND_FAILED);
+//				}
+//			}
+//			packet_start = it;
+//			net::PacketProsess::ClearTiebaTaskList(&task);
+//			// 一次只发一个包
+//			break;
+//		}
+//	}
+//	base_logic::TiebaTask::TypeList &type_queue = base_logic::TiebaTask::type_list_;
+//	int64 last_type = type_queue.front();
+//	type_queue.pop();
+//	type_queue.push(last_type);
+//
+//	//解决余数
+//	if (task.task_set.size() > 0) {
+//		task.tasks_num = task.task_set.size();
+//		task.packet_length = task.data_length = data_length;
+//		data_length = 0;
+//		bool send_success = crawler_schduler_engine_->SendOptimalRouter((const void*) &task, 0,
+//				crawler_type);
+//		if (!send_success) {
+//			for (; packet_start != it; ++packet_start) {
+//				packet_start->set_state(TASK_SEND_FAILED);
+//			}
+//		}
+//		net::PacketProsess::ClearTiebaTaskList(&task);
+//	}
+//	for (it = task_cache_->task_idle_list_.begin();
+//			it != task_cache_->task_idle_list_.end();) {
+//		base_logic::TiebaTask &task = *it;
+//		if (TASK_INVALID == task.state()) {
+//			task_cache_->task_idle_list_.erase(it++);
+//		} else if (TASK_SEND == task.state()) {
+//			task_cache_->task_exec_map_[task.id()] = task;
+//			task_cache_->task_idle_list_.erase(it++);
+//		} else {
+//			++it;
+//		}
+//	}
+//	LOG_DEBUG2("after distribution task, task_idle_list_ size = %d",
+//			task_cache_->task_idle_list_.size());
+//	return true;
 }
 void TaskSchdulerManager::CheckIsEffective() {
 	crawler_schduler_engine_->CheckIsEffective();

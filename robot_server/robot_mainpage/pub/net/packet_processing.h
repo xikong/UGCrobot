@@ -21,7 +21,7 @@
             static_cast<int>(v))
 
 #define PRINT_INT64(v)    \
-    j += snprintf(buf + j, DUMPPACKBUF - j, "\t%s = %lld\n", #v, (int64_t)v)
+    j += snprintf(buf + j, DUMPPACKBUF - j, "\t%s = %lld\n", #v, (int64)v)
 
 #define PRINT_STRING(v) \
     j += snprintf(buf + j, DUMPPACKBUF - j, "\t%s = %s\n", #v, (const char *)v)

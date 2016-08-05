@@ -66,7 +66,10 @@ bool Managerlogic::Init() {
 }
 
 bool Managerlogic::Startup() {
-  base_logic::MLockGd lk(session_mgr_->lock_);
+  // 该函数本应该在 构造函数中调用, 但是构造函数中获取不到 server
+  // 因此把该函数放在定时任务中, 而且应该保证该函数应该在其它插件的定时任务之前执行
+  // 以便其它插件能正确获取到共享数据, 但是无法保证该定时任务在其它插件的定时任务之前执行
+  // 因此应该在其它插件中定时检查是否成功获取到了共享数据
   struct server* pserver = logic::CoreSoUtils::GetSRV();
   assert(pserver);
 
@@ -75,24 +78,18 @@ bool Managerlogic::Startup() {
 
   *((SessionManager**) (p_share)) = session_mgr_;
 
-  ServerSession *srv_session = session_mgr_->GetServer();
-  srv_session->set_ip(std::string(pserver->srv_conf.bindhost->ptr));
-  srv_session->set_port(atoi(pserver->srv_conf.port->ptr));
+  session_mgr_->SetServerAddr(pserver->srv_conf.bindhost->ptr,
+                              atoi(pserver->srv_conf.port->ptr));
 
-  if (NULL == pserver->create_connect_socket) {
-    LOG_MSG("create_connect_socket is NULL");
-    return false;
-  }
-  Session *slb = session_mgr_->GetSLB();
-  slb->BindConnectCallback(pserver->create_connect_socket);
-  if (slb->Connect()) {
+  assert(pserver->create_connect_socket);
+  Session::BindConnectCallback(pserver->create_connect_socket);
+  if (session_mgr_->ConnectToSLB()) {
     RegSelf();
   }
   return true;
 }
 
 bool Managerlogic::RegSelf() {
-  base_logic::MLockGd lk(session_mgr_->lock_);
   struct RegisterServer register_server;
   ServerSession *srv_session = session_mgr_->GetServer();
   MAKE_HEAD(register_server, REGISTER_SERVER, 0, 0, 0, 0, 0,
@@ -106,16 +103,18 @@ bool Managerlogic::RegSelf() {
          srv_session->mac().size());
   register_server.port = srv_session->port();
 
-  return session_mgr_->GetSLB()->SendData(&register_server);
+  return session_mgr_->SendDataToSLB(&register_server);
 }
 
 bool Managerlogic::CheckIsRegistered() {
-  base_logic::MLockGd lk(session_mgr_->lock_);
-  ServerSession *srv_session = session_mgr_->GetServer();
-  SLBSession *slb = session_mgr_->GetSLB();
-  if (!srv_session->is_valid() || !srv_session->re_registered()) {
+  if (!session_mgr_->SLBIsConnected()) {
+    session_mgr_->ConnectToSLB();
+    LOG_MSG("connection with slb is break, reconnect");
+  }
+
+  if (!session_mgr_->ServerIsValid() || !session_mgr_->ServerHasReRegisterSuccess()) {
     static int n = 0;
-    LOG_MSG2("server has not register success, don't send heart,"
+    LOG_MSG2("server has not register success"
         "try to register for the %d time", ++n);
     RegSelf();
     return false;
@@ -124,37 +123,32 @@ bool Managerlogic::CheckIsRegistered() {
 }
 
 bool Managerlogic::SendHeart() {
-  base_logic::MLockGd lk(session_mgr_->lock_);
-  ServerSession *srv_session = session_mgr_->GetServer();
-  SLBSession *slb = session_mgr_->GetSLB();
-  if (!srv_session->is_valid()) {
+  if (!session_mgr_->ServerIsValid()) {
     LOG_MSG("server has not register success, don't send heart");
     return false;
   }
-
-  if (!slb->IsConnected()) {
-    slb->Connect();
-    LOG_MSG("connection with slb is break, reconnect");
-  }
-
   bool ret = true;
   struct PacketHead heartbeat_packet;
+  ServerSession *srv_session = session_mgr_->GetServer();
   MAKE_HEAD(heartbeat_packet, HEART_TO_SLB, 0, 0, 0, 0, 0,
-            srv_session->server_type(), srv_session->id(), 0); LOG_DEBUG("send heart");
-  if (srv_session->re_registered()) {
-    session_mgr_->GetSLB()->SendData(&heartbeat_packet);
+            srv_session->server_type(), srv_session->id(), 0);
+  LOG_DEBUG("send heart");
+
+  // SLB 心跳包
+  if (session_mgr_->ServerHasReRegisterSuccess()) {
+    session_mgr_->SendDataToSLB(&heartbeat_packet);
   }
-  session_mgr_->SendDataToRouter(&heartbeat_packet);
-  return ret;
+
+  // router 心跳包
+  return session_mgr_->SendDataToRouter(&heartbeat_packet);
 }
 
 bool Managerlogic::SendSelfState() {
-  base_logic::MLockGd lk(session_mgr_->lock_);
-  ServerSession *srv_session = session_mgr_->GetServer();
-  if (!srv_session->is_valid()) {
+  if (!session_mgr_->ServerIsValid()) {
     LOG_MSG("server has not register success, don't send state");
     return false;
   }
+  ServerSession *srv_session = session_mgr_->GetServer();
   bool ret = true;
   struct ReplyPlgSvcTaskState task_state;
   MAKE_HEAD(task_state, PLUGIN_SVC_AVAILABLE_RESOURCE_NUM, 0, 0, 0, 0, 0,
@@ -178,7 +172,7 @@ bool Managerlogic::HandleAllConnect(const char *func, struct server *srv,
                                     const int socket) {
   std::string addr;
   logic::SomeUtils::GetAddressBySocket(socket, addr);
-  LOG_MSG2("func: [%s] new connect, socket = %d, addr = %s", func, socket, addr.c_str());
+  LOG_MSG2("[%s] new connect, socket = %d, addr = %s", func, socket, addr.c_str());
   return true;
 }
 
@@ -186,48 +180,9 @@ bool Managerlogic::OnManagerConnect(struct server *srv, const int socket) {
   return HandleAllConnect(__FUNCTION__, srv, socket);
 }
 
-bool Managerlogic::HandleAllMessage(const char *func, struct server *srv,
-                                    const int socket, const void *msg,
-                                    const int len) {
-  bool r = false;
-  struct PacketHead* packet = NULL;
-  if (srv == NULL || socket < 0 || msg == NULL || len < PACKET_HEAD_LENGTH)
-    return false;
-
-  if (!net::PacketProsess::UnpackStream(msg, len, &packet)) {
-    LOG_ERROR2("UnpackStream Error socket %d", socket);
-    net::PacketProsess::HexEncode(msg, len);
-    return false;
-  }
-  assert(packet);
-  std::string addr;
-  logic::SomeUtils::GetAddressBySocket(socket, addr);
-  LOG_MSG2("func: [%s] packet->operate_code=%d, socket = %d, addr = %s",
-      func, (int)packet->operate_code, socket, addr.c_str());
-  switch (packet->operate_code) {
-    case PLUGIN_SVC_MGR_ROUTER_REG: {
-      OnRouterReg(srv, socket, packet);
-      break;
-    }
-    case HEART_PACKET: {
-      OnCheckHeartPacket(srv, socket, packet);
-      break;
-    }
-    case PLUGIN_SVC_MGR_ROUTER_REG_STATE: {
-      OnRouterRegState(srv, socket, packet);
-      break;
-    }
-    default:
-      break;
-  }
-  net::PacketProsess::DeletePacket(msg, len, packet);
-  return true;
-}
-
 bool Managerlogic::OnManagerMessage(struct server *srv, const int socket,
                                     const void *msg, const int len) {
-  base_logic::MLockGd lk(session_mgr_->lock_);
-  if (!session_mgr_->GetServer()->is_valid()) {
+  if (!session_mgr_->ServerIsValid()) {
     LOG_MSG("server has not registered success, don't process any request");
     return false;
   }
@@ -335,27 +290,69 @@ bool Managerlogic::OnSelfRegState(struct server* srv, int socket,
                                   int32 len) {
   bool ret = true;
   struct PluginSvcRegState *reg_state = (struct PluginSvcRegState *) packet;
-  base_logic::MLockGd lk(session_mgr_->lock_);
   std::string token(reg_state->token);
   LOG_DEBUG2("server register result: id: %d, token: %s",
              reg_state->server_id, token.c_str());
   ServerSession *srv_session = session_mgr_->GetServer();
   if ('\0' == reg_state->token[0]) {
     ret = false;
-    if (Session::VERIFY_STATE_SUCCESS != srv_session->verity_state()) {
-      srv_session->set_verity_state(Session::VERIFY_STATE_FAILED);
+    if (Session::VERIFY_STATE_SUCCESS != session_mgr_->ServerVerifyState()) {
+      session_mgr_->SetServerVerifyState(Session::VERIFY_STATE_FAILED);
     }
     LOG_MSG("plugin server register failed");
   } else {
     ret = true;
     // 重新注册成功
-    srv_session->set_re_registered(true);
+    session_mgr_->SetServerReRegisterIsSuccess(true);
+    // 如果之前已经注册成功，直接返回，不重新赋值，避免不必要的加锁
+    if (session_mgr_->ServerIsValid()) {
+      return true;
+    }
+    session_mgr_->SetServerVerifyState(Session::VERIFY_STATE_SUCCESS);
     srv_session->set_id(reg_state->server_id);
-    srv_session->set_verity_state(Session::VERIFY_STATE_SUCCESS);
     srv_session->set_token(reg_state->token, TOKEN_SIZE - 1);
   }
   return ret;
 }
+
+bool Managerlogic::HandleAllMessage(const char *func, struct server *srv,
+                                    const int socket, const void *msg,
+                                    const int len) {
+  bool r = false;
+  struct PacketHead* packet = NULL;
+  if (srv == NULL || socket < 0 || msg == NULL || len < PACKET_HEAD_LENGTH)
+    return false;
+
+  if (!net::PacketProsess::UnpackStream(msg, len, &packet)) {
+    LOG_ERROR2("UnpackStream Error socket %d", socket);
+    net::PacketProsess::HexEncode(msg, len);
+    return false;
+  }
+  assert(packet);
+  std::string addr;
+  logic::SomeUtils::GetAddressBySocket(socket, addr);
+  LOG_MSG2("func: [%s] packet->operate_code=%d, socket = %d, addr = %s",
+      func, (int)packet->operate_code, socket, addr.c_str());
+  switch (packet->operate_code) {
+    case PLUGIN_SVC_MGR_ROUTER_REG: {
+      OnRouterReg(srv, socket, packet);
+      break;
+    }
+    case HEART_PACKET: {
+      OnCheckHeartPacket(srv, socket, packet);
+      break;
+    }
+    case PLUGIN_SVC_MGR_ROUTER_REG_STATE: {
+      OnRouterRegState(srv, socket, packet);
+      break;
+    }
+    default:
+      break;
+  }
+  net::PacketProsess::DeletePacket(msg, len, packet);
+  return true;
+}
+
 
 bool Managerlogic::OnRouterReg(struct server* srv, int socket,
                                struct PacketHead *packet, const void *msg,
@@ -367,19 +364,17 @@ bool Managerlogic::OnRouterReg(struct server* srv, int socket,
   LOG_DEBUG2("router coming, id: %d, socket: %d, token: %s",
       router_reg->router_id, socket, token.c_str());
 
-  base_logic::MLockGd lk(session_mgr_->lock_);
-  ServerSession *srv_session = session_mgr_->GetServer();
-  if (!srv_session->is_valid()) {
-    LOG_MSG("server has not registered success, don't process any request");
-    return false;
-  }
-
-  SLBSession *slb = session_mgr_->GetSLB();
-  if (!slb->IsConnected()) {
+  if (!session_mgr_->SLBIsConnected()) {
     LOG_MSG("connection with SLB is not established");
     return false;
   }
 
+  if (!session_mgr_->ServerHasReRegisterSuccess()) {
+    LOG_MSG("server has not re register success, don't process new request");
+    return false;
+  }
+
+  base_logic::MLockGd lk(session_mgr_->lock_);
   RouterSession *router_session = NULL;
   // 如果 router 存在，则复用之前的 router
   if (session_mgr_->ExistRouter(router_reg->router_id)) {
@@ -403,9 +398,10 @@ bool Managerlogic::OnRouterReg(struct server* srv, int socket,
   router_session->set_token(token.c_str(), token.size());
   router_session->SetConnected();
 
+  ServerSession *srv_session = session_mgr_->GetServer();
   router_reg->server_id = srv_session->id();
   router_reg->server_type = srv_session->server_type();
-  if (!slb->SendData(packet)) {
+  if (!session_mgr_->SendDataToSLB(packet)) {
     LOG_MSG("send router register message to slb error");
     ret = false;
   }

@@ -873,6 +873,9 @@ class ForgeryIP {
     return data_->ip_;
   }
 
+  void set_attr_id(int64 attr_id) { data_->attr_id_ = attr_id; }
+  int64 attr_id() const { return data_->attr_id_; }
+
   static bool cmp(const ForgeryIP& t_info, const ForgeryIP& r_info);
 
   void ValueSerialization(base_logic::DictionaryValue* dict);
@@ -883,6 +886,7 @@ class ForgeryIP {
         : refcount_(1),
           id_(0),
           type_(0),
+          attr_id_(0),
           count_(0),
           send_last_time_(0) {
     }
@@ -890,6 +894,7 @@ class ForgeryIP {
    public:
     int32 id_;
     int8 type_;
+    int64 attr_id_;
     int64 count_;
     time_t send_last_time_;
     std::string create_time_;
@@ -1464,12 +1469,21 @@ class RobotTask {
   static const int64 SNOWBALL = 7008;
   static const int64 TAOGUBA_MAIN = 7007;
 
+  enum TaskSubType {
+    SUBTYPE_UNKNOWN,
+    MAIN,
+    MIDDLE,
+    FINAL
+  };
+
   RobotTask()
       : id_(0),
         type_(0),
+        sub_type_(FINAL),
         state_(TASK_WAIT),
         send_time_(0),
-        create_time_(time(NULL)) {
+        create_time_(time(NULL)),
+        method_(0) {
   }
   virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
   virtual void ValueSerialization(base_logic::DictionaryValue* dict);
@@ -1486,6 +1500,13 @@ class RobotTask {
   }
   void set_type(int64 type) {
     type_ = type;
+  }
+
+  void set_sub_type(TaskSubType type) {
+    sub_type_ = type;
+  }
+  TaskSubType sub_type() {
+    return sub_type_;
   }
   void set_state(int state) {
     state_ = state;
@@ -1512,9 +1533,14 @@ class RobotTask {
   time_t create_time() const {
     return create_time_;
   }
+
+  void set_method(int8 method) { method_ = method; }
+  int8 method() const { return method_; }
  protected:
   int64 id_;		//任务 id
   int64 type_;
+  int8 method_;
+  TaskSubType sub_type_;
   int state_;
   time_t create_time_;
   int32 send_time_;
@@ -1662,17 +1688,17 @@ class TianyaTask : public RobotTask {
 
 class TiebaTask : public RobotTask {
  public:
-  typedef std::queue<int64> TypeQueue;
-  static TypeQueue type_queue_;
+  typedef std::list<int64> TypeList;
+  static TypeList type_list_;
   TiebaTask()
       : polling_time_(10),
         base_polling_time_(10),
         last_task_time_(time(NULL)),
         is_main(false) {
-    type_queue_.push(7001);
-    type_queue_.push(7002);
-    type_queue_.push(7007);
-    type_queue_.push(7008);
+    type_list_.push_back(7001);
+    type_list_.push_back(7002);
+    type_list_.push_back(7007);
+    type_list_.push_back(7008);
   }
 
   virtual void GetDataFromKafka(base_logic::DictionaryValue* dict);
@@ -1728,6 +1754,18 @@ class TiebaTask : public RobotTask {
   bool is_main_task() const {
     return is_main;
   }
+
+  bool is_timeout() const {
+    // 主任务不设置超时
+    if (MAIN == sub_type_) {
+      return false;
+    }
+    time_t now = time(NULL);
+    if (create_time_+3600 < now) {
+      return true;
+    }
+    return false;
+  }
  private:
   std::string addr_;
   std::string url_;
@@ -1738,6 +1776,16 @@ class TiebaTask : public RobotTask {
   int64 polling_time_;
   int64 base_polling_time_;
   int64 last_task_time_;
+};
+
+// 贴吧黑名单
+struct BlackKw {
+  int64 id;
+  std::string url;
+  void ValueSerialization(base_logic::DictionaryValue* dict) {
+    dict->GetBigInteger(L"id", &id);
+    dict->GetString(L"url", &url);
+  }
 };
 
 }  // namespace base_logic

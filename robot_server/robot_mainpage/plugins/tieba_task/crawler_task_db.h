@@ -21,6 +21,8 @@ class CrawlerTaskDB {
     virtual ~CrawlerTaskDB();
 
  public:
+    bool FetchKwBlacklist(std::list<base_logic::BlackKw> &list);
+
     bool FecthBatchTask(std::list<base_logic::TiebaTask>* list,
             const bool is_new = false);
 
@@ -41,6 +43,9 @@ class CrawlerTaskDB {
     bool FectchBatchForgeryUA(std::list<base_logic::ForgeryUA>* list);
 
  public:
+    static void CallBackFetchKwBlacklist(void* param,
+                base_logic::Value* value);
+
     static void CallBackFectchBatchForgeryUA(void* param,
                 base_logic::Value* value);
 

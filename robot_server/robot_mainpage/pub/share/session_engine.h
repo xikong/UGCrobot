@@ -15,6 +15,11 @@
 #include "basic/basictypes.h"
 #include "logic/logic_unit.h"
 #include "thread/base_thread_lock.h"
+#include "logic/logic_comm.h"
+
+namespace manager_logic {
+class Managerlogic;
+}
 
 namespace plugin_share {
 
@@ -38,7 +43,7 @@ class Session {
   Session();
   ~Session();
  public:
-  void BindConnectCallback(CreateConnectFunc callback) { CreateConnect = callback; }
+  static void BindConnectCallback(CreateConnectFunc callback) { CreateConnect = callback; }
   bool Connect();
   bool SendData(struct PacketHead* packet);
   void OnClose();
@@ -150,13 +155,29 @@ class SessionManager {
 
   RouterSession* GetRouterById(int32 id);
   RouterSession* GetRouterBySocket(int socket);
-  SLBSession* GetSLB() { return &slb_; }
+
+  void SetServerAddr(const std::string ip, uint16 port);
+
+  bool ConnectToSLB();
+  bool SLBIsConnected() const;
+  bool SendDataToSLB(struct PacketHead* packet);
+
   ServerSession* GetServer() { return &server_; }
+  SLBSession* GetSLB() { return &slb_; }
+
+  void SetServerVerifyState(Session::VerifyState state);
+  Session::VerifyState ServerVerifyState() const;
+  bool ServerIsValid() const;
+  void SetServerReRegisterIsSuccess(bool is_success);
+  bool ServerHasReRegisterSuccess() const;
 
   void OnClose(int socket);
 
-public:
+private:
   struct threadmutex_t *lock_;
+private:
+  // 将 Managerlogic 声明为友元类，以便 Managerlogic 能访问以下两个函数
+  friend class manager_logic::Managerlogic;
 private:
   ServerSession server_;
   SLBSession slb_;

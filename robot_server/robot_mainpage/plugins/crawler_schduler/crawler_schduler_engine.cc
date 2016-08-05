@@ -256,8 +256,10 @@ bool RouterSchdulerManager::SendOptimalRouter(const void* data, const int32 len,
 
   base_logic::RouterScheduler schduler;
   schduler.set_idle_tasks(crawler_type, 0);
-  RouterSchedulerList::iterator it = schduler_cache_->router_scheduler_list_
-      .begin();
+  RouterSchedulerList::iterator it =
+      schduler_cache_->router_scheduler_list_.begin();
+  RouterSchedulerList::iterator del_it =
+      schduler_cache_->router_scheduler_list_.end();
   LOG_DEBUG("-------------------------router task count begin-------------------------");
   for (; it != schduler_cache_->router_scheduler_list_.end(); it++) {
     LOG_DEBUG2("router_id = %d, crawler_type = %d, idle tasks = %d", it->id(), crawler_type, it->idle_tasks(crawler_type));
@@ -267,13 +269,16 @@ bool RouterSchdulerManager::SendOptimalRouter(const void* data, const int32 len,
     }
     if (!base_logic::superior_to(schduler, *it, crawler_type)) {
       schduler = *it;
+      del_it = it;
       LOG_DEBUG("schduler superior to *it");
     }
-  }
-  LOG_DEBUG("------------------------- router task count end -------------------------");
-  LOG_DEBUG2("schduler->idle_tasks=%d", schduler.idle_tasks(crawler_type));
+  } LOG_DEBUG("------------------------- router task count end -------------------------"); LOG_DEBUG2("schduler->idle_tasks=%d", schduler.idle_tasks(crawler_type));
   if (schduler.idle_tasks(crawler_type) == 0)
     return false;
+
+  schduler_cache_->router_scheduler_list_.erase(del_it);
+  schduler_cache_->router_scheduler_list_.push_back(schduler);
+
   struct PacketHead* packet = (struct PacketHead*) data;
   struct AssignmentMultiTask* multi_task = (struct AssignmentMultiTask*) packet;
   multi_task->crawler_type = crawler_type;

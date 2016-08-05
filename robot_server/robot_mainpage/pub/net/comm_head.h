@@ -361,11 +361,12 @@ struct AssignTianyaTask: public PacketHead {
 };
 
 //  ASSIGN_TIEBA_TASK = 1438
-#define TIEBA_TASK_UNIT_SIZE	(sizeof(uint64) * 2 + sizeof(uint16) * 7)
+#define TIEBA_TASK_UNIT_SIZE	(sizeof(uint64) * 2 + sizeof(uint16) * 7 + sizeof(int8))
 struct TiebaTaskUnit {
 	uint16 task_len;
 	uint16 task_type;
 	uint64 task_id;
+	int8 method;
 	uint16 row_key_len;
 	std::string row_key;
 	uint64 cookie_id;

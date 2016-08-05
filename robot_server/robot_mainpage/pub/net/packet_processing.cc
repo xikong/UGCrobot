@@ -543,6 +543,7 @@ bool PacketProsess::PacketStream(const PacketHead* packet_head,
         out.Write16((*it)->task_len);
         out.Write16((*it)->task_type);
         out.Write64((*it)->task_id);
+        out.Write8((*it)->method);
         out.Write16((*it)->row_key.size());
         out.WriteData((*it)->row_key.c_str(), (*it)->row_key.size());
         out.Write64((*it)->cookie_id);
@@ -1934,6 +1935,7 @@ void PacketProsess::DumpPacket(const struct PacketHead* packet_head) {
         PRINT_INT((*it)->task_len);
         PRINT_INT((*it)->task_type);
         PRINT_INT64((*it)->task_id);
+        PRINT_INT((*it)->method);
         PRINT_INT((*it)->row_key.size());
         PRINT_STRING((*it)->row_key.c_str());
         PRINT_INT64((*it)->cookie_id);

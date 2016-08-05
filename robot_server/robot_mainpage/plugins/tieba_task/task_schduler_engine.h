@@ -6,6 +6,7 @@
 
 #include <map>
 #include <list>
+#include <sstream>
 #include "crawler_schduler/crawler_schduler_engine.h"
 #include "thread/base_thread_handler.h"
 #include "thread/base_thread_lock.h"
@@ -14,19 +15,120 @@
 #include "logic/auto_crawler_infos.h"
 #include "share/session_engine.h"
 #include "crawler_task_db.h"
+#include "kw_blacklist.h"
 
 #define GET_COOKIES_PER_TIME	3000
+
+class ForgeryIPManager;
 
 namespace tieba_task_logic {
 
 typedef std::map<int64, base_logic::TiebaTask> TASKINFO_MAP;
 typedef std::list<base_logic::TiebaTask> TASKINFO_LIST;
 
+struct TaskList {
+  int64 attr_id_;
+  TASKINFO_LIST main_list_;
+  TASKINFO_LIST middle_list_;
+  TASKINFO_LIST final_list_;
+  void ClearMainTaskList() { main_list_.clear(); }
+  void push_back(base_logic::TiebaTask &task) {
+    std::string type;
+    if (base_logic::RobotTask::MAIN == task.sub_type()) {
+      type = "main";
+      main_list_.push_back(task);
+    } else if (base_logic::RobotTask::MIDDLE == task.sub_type()) {
+      type = "middle";
+      middle_list_.push_back(task);
+    } else {
+      type = "final";
+      final_list_.push_back(task);
+    }
+    LOG_DEBUG2("%s --> %s", task.url().c_str(), type.c_str());
+  }
+  void push_main_task(base_logic::TiebaTask &task) {
+    main_list_.push_back(task);
+  }
+  size_t size() {
+    return main_list_.size() + middle_list_.size() + final_list_.size();
+  }
+  bool GetTask(base_logic::TiebaTask &task) {
+    time_t now = time(NULL);
+    do {
+      if (final_list_.size() > 0) {
+        task = final_list_.front();
+        final_list_.pop_front();
+      } else if (middle_list_.size() > 0) {
+        task = middle_list_.front();
+        middle_list_.pop_front();
+      } else if (main_list_.size() > 0) {
+        task = main_list_.front();
+        main_list_.pop_front();
+        main_list_.push_back(task);
+      } else {
+        return false;
+      }
+
+      if (task.is_timeout()) {
+        LOG_DEBUG2("task timeout, url = %s, current_time = %d, create_time = %d",
+           task.url().c_str() , now, task.create_time());
+      }
+    } while (task.is_timeout());
+    return true;
+  }
+};
+
+typedef std::map<int64, TaskList> PendingTaskMap;
 class TaskSchdulerCache {
  public:
   TASKINFO_LIST task_idle_list_;
+  PendingTaskMap pending_task_map_;
   TASKINFO_MAP task_exec_map_;
   TASKINFO_LIST task_temp_list_;
+
+  void ClearMainTask() {
+    PendingTaskMap::iterator it = pending_task_map_.begin();
+    for (; it != pending_task_map_.end(); ++it) {
+      it->second.ClearMainTaskList();
+    }
+  }
+
+  void PrintTaskDetail() {
+    //******************* DEBUG *******************
+    PendingTaskMap::iterator it = pending_task_map_.begin();
+    std::stringstream os;
+    os << "\n---------------------- task detail begin ----------------------\n";
+    for (; it != pending_task_map_.end(); ++it) {
+      os << "type: " << it->first << ", ";
+      os << "main: " << it->second.main_list_.size() << ", ";
+      os << "middle: " << it->second.middle_list_.size() << ", ";
+      os << "final: " << it->second.final_list_.size() << "\n";
+    }
+    os << "---------------------- task detail end  ----------------------";
+    LOG_DEBUG2("%s", os.str().c_str());
+    //******************* DEBUG *******************
+  }
+  bool GetTask(base_logic::TiebaTask &task) {
+    base_logic::TiebaTask::TypeList &type_list = task.type_list_;
+    base_logic::TiebaTask::TypeList::iterator it = type_list.begin();
+    for (; it != type_list.end(); ++it) {
+      int64 type = *it;
+      if (pending_task_map_[type].size() > 0) {
+        type_list.erase(it);
+        type_list.push_back(type);
+        return pending_task_map_[type].GetTask(task);
+      }
+    }
+    return false;
+  }
+  size_t size() {
+    size_t sum = 0;
+    PendingTaskMap::iterator it = pending_task_map_.begin();
+    for (; it != pending_task_map_.end(); ++it) {
+      sum += it->second.size();
+    }
+    return sum;
+  }
 };
 
 typedef std::list<base_logic::LoginCookie> CookieList;
@@ -45,7 +147,11 @@ typedef std::map<int64, CookiePlatform> CookieMap;
 
 class CookieCache {
  public:
+  ~CookieCache() {
+//    DeinitThreadMutex(lock_);
+  }
   bool GetCookie(int64 attr_id, base_logic::LoginCookie &cookie) {
+//    base_logic::MLockGd lk(lock_);
     if (cookie_map_.end() == cookie_map_.find(attr_id)) {
       LOG_MSG2("can't find the cookie with the attr_id: %d", attr_id);
       return false;
@@ -59,6 +165,7 @@ class CookieCache {
   }
 
   void SortCookies() {
+//    base_logic::MLockGd lk(lock_);
     CookieMap::iterator it = cookie_map_.begin();
     for (; cookie_map_.end() != it; ++it) {
       struct CookiePlatform &platform = it->second;
@@ -67,11 +174,13 @@ class CookieCache {
     }
   }
  public:
+//  struct threadmutex_t *lock_;
   CookieMap cookie_map_;
   std::map<int64, int64> update_time_map_;
   uint64 last_time;
   CookieCache() {
     last_time = 0;
+//    InitThreadMutex(&lock_, PTHREAD_MUTEX_RECURSIVE);
   }
 };
 
@@ -143,7 +252,7 @@ class TaskSchdulerManager {
   void FetchBatchTask(std::list<base_logic::TiebaTask> *list, bool is_first =
                           false);
 
-  void FetchBatchTemp(std::list<base_logic::TiebaTask>* list);
+  void FetchMainTask(std::list<base_logic::TiebaTask>* list);
 
  public:
   bool DistributionTask();
@@ -196,8 +305,9 @@ class TaskSchdulerManager {
   int32 crawler_count_;
   tieba_task_logic::CrawlerTaskDB* task_db_;
   CookieCache *cookie_cache_;
-  IPCache *ip_cache_;
+  ForgeryIPManager *ip_cache_;
   ForgeryUACache *ua_cache_;
+  KwBlacklist* kw_blacklist_;
 };
 
 class TaskSchdulerEngine {

@@ -17,6 +17,9 @@
 #define TIME_DISTRBUTION_TEMP_TASK   10008
 #define TIME_UPDATE_EXEC_TASKS		   10009
 #define TIME_FETCH_IP                10010
+#define TIME_FETCH_BLACK_KW          10011
+
+class ForgeryIPManager;
 
 namespace tieba_task_logic {
 
@@ -45,6 +48,7 @@ class TaskTimeManager {
 
  private:
   tieba_task_logic::TaskSchdulerManager* schduler_mgr_;
+  ForgeryIPManager* ip_mgr_;
   scoped_ptr<tieba_task_logic::CrawlerTaskDB> task_db_;
   CrawlerTaskKafka task_kafka_;
   plugin_share::SessionManager *session_mgr_;

@@ -15,13 +15,13 @@ namespace tieba_task_logic {
 
 CrawlerTaskKafka::CrawlerTaskKafka() {
   if (CONSUMER_INIT_SUCCESS
-      != kafka_consumer_.Init(0, "robot_stock", "222.73.57.12:9092",
+      != kafka_consumer_.Init(0, "robot_stock", "61.147.80.245:9092",
       NULL))
     LOG_DEBUG("kafka consumer robot_stock init failed");
   else
     LOG_DEBUG("kafka consumer robot_stock init success");
   if (PRODUCER_INIT_SUCCESS
-      != kafka_producer_.Init(0, "robot_stockresult", "222.73.57.12:9092",
+      != kafka_producer_.Init(0, "robot_stockresult", "61.147.80.245:9092",
       NULL))
     LOG_ERROR("producer robot_stockresult init failed");
 }

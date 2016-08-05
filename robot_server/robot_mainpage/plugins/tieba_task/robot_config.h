@@ -41,21 +41,30 @@ class Config {
   int reply_self_state_tick;
 
   // 每种平台任务执行间隔
-  int tieba_tick;
-  int weibo_tick;
-  int tianya_tick;
-  int qzone_tick;
-  int maopu_tick;
-  int douban_tick;
-  int taoguba_tick;
-  int snowball_tick;
+  int tieba_task_tick;
+  int weibo_task_tick;
+  int tianya_task_tick;
+  int qzone_task_tick;
+  int maopu_task_tick;
+  int douban_task_tick;
+  int taoguba_task_tick;
+  int snowball_task_tick;
 
   // cookie 使用间隔
   int cookie_use_tick;
+
+  // 贴吧黑名单更新间隔
+  int fetch_black_kw_tick;
  private:
   Config(const Config &config);
   Config& operator=(const Config &config);
 };
 }
 
+class Config {
+ public:
+  Config();
+  virtual ~Config();
+};
 #endif /* KID_PLUGINS_TIEBA_TASK_ROBOT_CONFIG_H_ */
+

@@ -55,14 +55,14 @@ bool Session::Connect() {
 }
 
 bool Session::SendData(struct PacketHead* packet) {
-  LOG_DEBUG2("send data to id[%d], addr: %s: %u, socket: %d",
+  LOG_DEBUG2("server > id[%d] addr %s: %u, socket: %d",
              id_, ip_.c_str(), port_, socket_);
   if (!IsConnected()) {
     LOG_MSG2("connection %s: %u is break", ip_.c_str(), port_);
     return false;
   }
   if (!send_message(socket_, packet)) {
-    LOG_MSG2("send data to id[%d], addr: %s: %u fail, socket: %d",
+    LOG_MSG2("send data to id[%d], addr %s: %u fail, socket: %d",
              id_, ip_.c_str(), port_, socket_);
     return false;
   }
@@ -91,11 +91,13 @@ SessionManager::~SessionManager() {
 }
 
 bool SessionManager::ExistRouter(int32 id) {
+  base_logic::MLockGd lk(lock_);
   RouterIdMap &id_map = cache_.router_id_map;
   return id_map.end() != id_map.find(id);
 }
 
 bool SessionManager::ExistRouterSession(int32 id, int socket) {
+  base_logic::MLockGd lk(lock_);
   RouterIdMap &id_map = cache_.router_id_map;
   RouterIdMap::const_iterator it = id_map.find(id);
   return id_map.end() != it && it->second->get_socket() == socket;
@@ -103,6 +105,7 @@ bool SessionManager::ExistRouterSession(int32 id, int socket) {
 
 bool SessionManager::IsValidRouter(int32 id) {
   bool r = false;
+  base_logic::MLockGd lk(lock_);
   RouterIdMap &id_map = cache_.router_id_map;
   RouterIdMap::const_iterator it = id_map.find(id);
   return id_map.end() != it && it->second->is_valid();
@@ -112,6 +115,7 @@ bool SessionManager::IsValidSocket(int socket) {
   if (socket <= 0) {
     return false;
   }
+  base_logic::MLockGd lk(lock_);
   bool r = slb_.get_socket() == socket && slb_.is_valid();
   RouterSocketMap &socket_map = cache_.router_socket_map;
   RouterSocketMap::const_iterator it = socket_map.find(socket);
@@ -124,6 +128,7 @@ bool SessionManager::AddRouter(RouterSession *router) {
   }
   int32 new_id = router->id();
   int new_socket = router->get_socket();
+  base_logic::MLockGd lk(lock_);
   RouterIdMap &id_map = cache_.router_id_map;
   RouterSocketMap &socket_map = cache_.router_socket_map;
   RouterIdMap::const_iterator id_it = id_map.find(new_id);
@@ -155,6 +160,7 @@ bool SessionManager::AddRouter(RouterSession *router) {
 
 bool SessionManager::DelRouterById(int32 id) {
   bool ret = true;
+  base_logic::MLockGd lk(lock_);
   RouterIdMap &id_map = cache_.router_id_map;
   RouterIdMap::iterator id_it = id_map.find(id);
   if (id_map.end() == id_it) {
@@ -195,6 +201,7 @@ bool SessionManager::DelRouterById(int32 id) {
 }
 
 bool SessionManager::DelRouterBySocket(int socket) {
+  base_logic::MLockGd lk(lock_);
   RouterSocketMap &socket_map = cache_.router_socket_map;
   RouterSocketMap::iterator socket_it = socket_map.find(socket);
   if (socket_map.end() == socket_it) {
@@ -205,6 +212,7 @@ bool SessionManager::DelRouterBySocket(int socket) {
 }
 
 bool SessionManager::SendDataToRouter(struct PacketHead *data) {
+  base_logic::MLockGd lk(lock_);
   RouterList &list = cache_.router_list;
   RouterList::iterator it = list.begin();
   for (; list.end() != it; ++it) {
@@ -219,6 +227,7 @@ bool SessionManager::SendDataToRouter(struct PacketHead *data) {
 }
 
 RouterSession* SessionManager::GetRouterById(int32 id) {
+  base_logic::MLockGd lk(lock_);
   RouterIdMap &id_map = cache_.router_id_map;
   RouterIdMap::const_iterator it = id_map.find(id);
   if (id_map.end() == it) {
@@ -228,6 +237,7 @@ RouterSession* SessionManager::GetRouterById(int32 id) {
 }
 
 RouterSession* SessionManager::GetRouterBySocket(int socket) {
+  base_logic::MLockGd lk(lock_);
   RouterSocketMap &socket_map = cache_.router_socket_map;
   RouterSocketMap::const_iterator it = socket_map.find(socket);
   if (socket_map.end() == it) {
@@ -236,7 +246,54 @@ RouterSession* SessionManager::GetRouterBySocket(int socket) {
   return it->second;
 }
 
+void SessionManager::SetServerAddr(const std::string ip, uint16 port) {
+  base_logic::MLockGd lk(lock_);
+  server_.set_ip(ip);
+  server_.set_port(port);
+}
+
+void SessionManager::SetServerVerifyState(Session::VerifyState state) {
+  base_logic::MLockGd lk(lock_);
+  server_.set_verity_state(state);
+}
+
+Session::VerifyState SessionManager::ServerVerifyState() const {
+  base_logic::MLockGd lk(lock_);
+  return server_.verity_state();
+}
+
+bool SessionManager::ServerIsValid() const {
+  base_logic::MLockGd lk(lock_);
+  return server_.is_valid();
+}
+
+void SessionManager::SetServerReRegisterIsSuccess(bool is_success) {
+  base_logic::MLockGd lk(lock_);
+  server_.set_re_registered(is_success);
+}
+
+bool SessionManager::ServerHasReRegisterSuccess() const {
+  base_logic::MLockGd lk(lock_);
+  return server_.re_registered();
+}
+
+bool SessionManager::ConnectToSLB() {
+  base_logic::MLockGd lk(lock_);
+  return slb_.Connect();
+}
+
+bool SessionManager::SLBIsConnected() const {
+  base_logic::MLockGd lk(lock_);
+  return slb_.IsConnected();
+}
+
+bool SessionManager::SendDataToSLB(struct PacketHead* packet) {
+  base_logic::MLockGd lk(lock_);
+  return slb_.SendData(packet);
+}
+
 void SessionManager::OnClose(int socket) {
+  base_logic::MLockGd lk(lock_);
   if (slb_.get_socket() == socket) {
     slb_.OnClose();
     server_.set_re_registered(false);

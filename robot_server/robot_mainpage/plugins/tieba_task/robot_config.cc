@@ -34,14 +34,15 @@ Config::Config(const char *filename)
       fetch_cookies_tick(60),
       reply_self_state_tick(20),
       cookie_use_tick(24 * 60 * 60),
-      tieba_tick(10 * 60),
-      weibo_tick(10 * 60),
-      tianya_tick(10 * 60),
-      qzone_tick(10 * 60),
-      maopu_tick(10 * 60),
-      douban_tick(10 * 60),
-      taoguba_tick(10 * 60),
-      snowball_tick(10 * 60) {
+      tieba_task_tick(10 * 60),
+      weibo_task_tick(10 * 60),
+      tianya_task_tick(10 * 60),
+      qzone_task_tick(10 * 60),
+      maopu_task_tick(10 * 60),
+      douban_task_tick(10 * 60),
+      taoguba_task_tick(10 * 60),
+      snowball_task_tick(10 * 60),
+      fetch_black_kw_tick(10 * 60) {
   // TODO Auto-generated constructor stub
   ReadConfig(filename);
 }
@@ -112,15 +113,17 @@ void Config::Deserialize(base_logic::DictionaryValue *dict) {
   SET_VALUE(fetch_content_tick);
   SET_VALUE(fetch_cookies_tick);
   SET_VALUE(reply_self_state_tick);
-  SET_VALUE(tieba_tick);
-  SET_VALUE(weibo_tick);
-  SET_VALUE(tianya_tick);
-  SET_VALUE(qzone_tick);
-  SET_VALUE(maopu_tick);
-  SET_VALUE(douban_tick);
-  SET_VALUE(taoguba_tick);
-  SET_VALUE(snowball_tick);
+  SET_VALUE(tieba_task_tick);
+  SET_VALUE(weibo_task_tick);
+  SET_VALUE(tianya_task_tick);
+  SET_VALUE(qzone_task_tick);
+  SET_VALUE(maopu_task_tick);
+  SET_VALUE(douban_task_tick);
+  SET_VALUE(taoguba_task_tick);
+  SET_VALUE(snowball_task_tick);
   SET_VALUE(cookie_use_tick);
+
+  SET_VALUE(fetch_black_kw_tick);
 }
 
 void Config::Print() const {
@@ -141,14 +144,16 @@ void Config::Print() const {
   PRINT(fetch_content_tick);
   PRINT(cookie_use_tick);
   PRINT(fetch_cookies_tick);
-  PRINT(tieba_tick);
-  PRINT(weibo_tick);
-  PRINT(tianya_tick);
-  PRINT(qzone_tick);
-  PRINT(maopu_tick);
-  PRINT(douban_tick);
-  PRINT(taoguba_tick);
-  PRINT(snowball_tick);
+  PRINT(tieba_task_tick);
+  PRINT(weibo_task_tick);
+  PRINT(tianya_task_tick);
+  PRINT(qzone_task_tick);
+  PRINT(maopu_task_tick);
+  PRINT(douban_task_tick);
+  PRINT(taoguba_task_tick);
+  PRINT(snowball_task_tick);
+
+  PRINT(fetch_black_kw_tick);
   os << "--------------------- Config End  ---------------------" << std::endl;
   LOG_MSG2("%s", os.str().c_str());
 #undef PRINT
