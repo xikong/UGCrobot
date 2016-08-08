@@ -11,53 +11,56 @@
 #include <sstream>
 #include <iostream>
 #include <curl/curl.h>
+#include <stdlib.h>
 
 #include "net/comm_head.h"
 #include "net/packet_define.h"
 #include "net/packet_processing.h"
 #include "logic/logic_unit.h"
 
+#include "../../plugins/robot_check/robot_check_header.h"
+using robot_check_logic::RobotTask;
+
 using std::string;
 
 namespace base_logic {
 
-class TaskEngine {
+class TaskEngine{
  protected:
-    TaskEngine() {};
+    TaskEngine() {
+    }
+    ;
 
  public:
-    virtual ~TaskEngine() {};
+    virtual ~TaskEngine() {
+    }
+    ;
 
-    virtual bool StartTaskWork(const string &str_referer,
-            const string &str_content, string &str_response);
-
-    virtual bool JudgeResultByResponse(const string &str_content, const string response) = 0;
-
-    bool SendHttpRequestCurl(const string &str_url, string &str_response);
-
-    static size_t ReadResponse(void* buffer, size_t size, size_t member, void* res);
+    virtual bool StartTaskWork(RobotTask &task );
+    virtual bool JudgeResultByResponse(RobotTask &task, string &response ) = 0;
+    bool SendHttpRequestCurl(const string &str_url, string &str_response );
+    static size_t ReadResponse(void* buffer, size_t size, size_t member,
+                               void* res );
 
 };
 
 class TaskTieBaEngine : public TaskEngine{
  public:
-    static TaskTieBaEngine *GetInstance(){
-        if(NULL == instance_){
+    static TaskTieBaEngine *GetInstance() {
+        if (NULL == instance_) {
             instance_ = new TaskTieBaEngine();
         }
         return instance_;
     }
 
-    static void FreeInstance(){
+    static void FreeInstance() {
         delete instance_;
         instance_ = NULL;
     }
-
-    virtual bool JudgeResultByResponse(
-            const string &str_content, const string response);
+    virtual bool JudgeResultByResponse(RobotTask &task, string &response );
 
  private:
-    static TaskTieBaEngine  *instance_;
+    static TaskTieBaEngine *instance_;
 };
 
 } /* namespace base_logic */

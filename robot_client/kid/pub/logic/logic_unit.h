@@ -9,7 +9,7 @@
 #include <time.h>
 #include "basic/basictypes.h"
 #include "basic/native_library.h"
-#include "../../library/core/common.h"
+#include "core/common.h"
 #include "basic/basic_util.h"
 #include "net/packet_processing.h"
 #include "net/comm_head.h"
@@ -46,7 +46,9 @@ class SomeUtils{
 
     static std::string GetLocalTime(const time_t time);
 
-    static long GetCurrentTime();
+    static std::string GetBackUpFileName();
+
+    static long GetCurrentTimeMs();
 };
 
 class CoreSoUtils{

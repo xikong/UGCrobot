@@ -1,4 +1,3 @@
-
 #ifndef ROBOT_PUB_NET_COMM_HEAD_H_
 #define ROBOT_PUB_NET_COMM_HEAD_H_
 
@@ -52,32 +51,36 @@ enum ePRS {
     ZIP_AND_ENCRYPT = 3
 };
 
-enum eUAoRIP{
+enum eUAoRIP {
     IP = 1,
     UA = 2
 };
 
-enum eRegType{
+enum eRegType {
     FAILED = 0,
     SUCCESS = 1
 };
 
-enum eServerType{
+enum eServerType {
     LOGIN_SERVER = 1025,
     FORGERY_SERVER = 1026,
     MANAGER_SERVER = 1028
 };
 
-enum eRobotType{
+enum eRobotType {
     TASK_TIEBA = 7001,                  //贴吧
     TASK_WEIBO = 7002,                  //微博
     TASK_TIANYA = 7003,                 //BBS 天涯
     TASK_QQ = 7004,                     //QQ空间
     TASK_MOP = 7005,                    //maopu
-    TASK_DOUBAN = 7006
+    TASK_DOUBAN = 7006,					//豆瓣
+    TASK_TAOGUBA = 7007,				//淘股吧
+    TASK_XUEQIU = 7008,					//雪球
+    TASK_IGUBA = 7009,                  //东方股吧
+    TASK_TONGHUASHUN = 7010,            //同花顺
 };
 
-enum eForgeryType{
+enum eForgeryType {
     FORGERY_IP = 1,
     FORGERY_UA = 2,
     FORGERY_IP_UA = 3,
@@ -97,7 +100,7 @@ enum TASKSTAE {
     TASK_SUCCESS = 9
 };
 
-enum eMsgDefine{
+enum eMsgDefine {
 
     C2S_ROBOT_REQUEST_REGISTER = 1001,              //请求注册
     S2C_ROBOT_REGISTER_SUCCESS = 1002,              //注册结果
@@ -117,43 +120,42 @@ enum eMsgDefine{
     S2C_ALLOCATING_TIEBA_MULTI_TASK = 1237,         //收到服务器分配的贴吧任务
     S2C_ALLOCATING_QQZONE_MULTI_TASK = 1238,        //收到服务器分配的qq空间任务
 
-
     S2C_ALLOCATING_MULTI_ROBOT_TASK = 1301
 
 };
 
-typedef struct SLBInfo{
+typedef struct SLBInfo {
 
     SLBInfo()
-    : port_(-1)
-    , conn_socket_(-1)
-    , is_register_(FAILED){
+            : port_(-1),
+              conn_socket_(-1),
+              is_register_(FAILED) {
     }
 
     std::string host_;
-    int16       port_;
-    int         conn_socket_;
-    bool        is_register_;
-    string      token_;
+    int16 port_;
+    int conn_socket_;
+    bool is_register_;
+    string token_;
 
-    int32       client_id_;
-    int32       client_type_;
-    string      mac_;
-    string      passwd_;
+    int32 client_id_;
+    int32 client_type_;
+    string mac_;
+    string passwd_;
 
 } SLBAgent;
 
-typedef struct RouterInfo{
+typedef struct RouterInfo {
 
     RouterInfo()
-    : port_(0)
-    , conn_socket_(-1){
+            : port_(0),
+              conn_socket_(-1) {
     }
 
-    string      host_;
-    int16       port_;
-    int         conn_socket_;
-    int8        is_login_;
+    string host_;
+    int16 port_;
+    int conn_socket_;
+    int8 is_login_;
 } RouterAgent;
 
 #endif

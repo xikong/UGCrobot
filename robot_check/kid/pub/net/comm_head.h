@@ -1,4 +1,3 @@
-
 #ifndef ROBOT_PUB_NET_COMM_HEAD_H_
 #define ROBOT_PUB_NET_COMM_HEAD_H_
 
@@ -45,7 +44,7 @@ using std::string;
     PRINT_INT(server_id);\
     PRINT_INT(reserved);\
 
-enum ePRS {
+enum ePRS{
     NOZIP_AND_NOENCRYPT = 0,
     ZIP_AND_NOENCRYPT = 1,
     NOZIP_AND_ENCRYPT = 2,
@@ -74,7 +73,8 @@ enum eRobotType{
     TASK_TIANYA = 7003,                 //BBS 天涯
     TASK_QQ = 7004,                     //QQ空间
     TASK_MOP = 7005,                    //maopu
-    TASK_DOUBAN = 7006
+    TASK_DOUBAN = 7006,					//豆瓣
+    TASK_TAOGUBA = 7007
 };
 
 enum eForgeryType{
@@ -84,7 +84,7 @@ enum eForgeryType{
     NOT_FORGERY = 4
 };
 
-enum TASKSTAE {
+enum TASKSTAE{
     TASK_WAIT = 0,
     TASK_SEND = 1,
     TASK_RECV = 2,
@@ -117,7 +117,6 @@ enum eMsgDefine{
     S2C_ALLOCATING_TIEBA_MULTI_TASK = 1237,         //收到服务器分配的贴吧任务
     S2C_ALLOCATING_QQZONE_MULTI_TASK = 1238,        //收到服务器分配的qq空间任务
 
-
     S2C_ALLOCATING_MULTI_ROBOT_TASK = 1301
 
 };
@@ -125,35 +124,54 @@ enum eMsgDefine{
 typedef struct SLBInfo{
 
     SLBInfo()
-    : port_(-1)
-    , conn_socket_(-1)
-    , is_register_(FAILED){
+            : port_(-1),
+              conn_socket_(-1),
+              is_register_(FAILED) {
     }
 
     std::string host_;
-    int16       port_;
-    int         conn_socket_;
-    bool        is_register_;
-    string      token_;
+    int16 port_;
+    int conn_socket_;
+    bool is_register_;
+    string token_;
 
-    int32       client_id_;
-    int32       client_type_;
-    string      mac_;
-    string      passwd_;
+    int32 client_id_;
+    int32 client_type_;
+    string mac_;
+    string passwd_;
 
 } SLBAgent;
 
 typedef struct RouterInfo{
 
     RouterInfo()
-    : port_(0)
-    , conn_socket_(-1){
+            : port_(0),
+              conn_socket_(-1) {
     }
 
-    string      host_;
-    int16       port_;
-    int         conn_socket_;
-    int8        is_login_;
+    string host_;
+    int16 port_;
+    int conn_socket_;
+    int8 is_login_;
 } RouterAgent;
+
+struct TaskCheckInfo{
+
+    TaskCheckInfo()
+            : page_id(1),
+              max_page_num(1),
+              is_sub_check(false) {
+    }
+
+    int task_id;
+    int task_type;
+    int page_id;
+    int max_page_num;
+    string str_url;
+    string str_referer;
+    string str_content;
+    string str_response;
+    bool is_sub_check;
+};
 
 #endif

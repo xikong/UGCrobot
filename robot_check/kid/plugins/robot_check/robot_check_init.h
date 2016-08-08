@@ -11,7 +11,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-int robot_check_plugin_init(struct plugin *pl);
+int robot_check_plugin_init(struct plugin *pl );
 #ifdef __cplusplus
 }
 #endif
