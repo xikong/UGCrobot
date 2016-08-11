@@ -1,27 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "fix.h"
 #include "glog/logging.h"
 #include "logon.h"
 #include "logout.h"
+#include "step.h"
 
-std::string escape(const std::string &s) {
-  std::string ret;
-  for (int i = 0; i < (int) s.size(); i++) {
-    char c = s[i];
-    if (c == step::STOP_BYTE) {  // SOH
-      ret.push_back('|');
-    } else {
-      ret.push_back(c);
-    }
-  }
-  return ret;
-}
+extern std::string escape(const std::string &s);
 
 int main(int argc, char **argv) {
   google::InitGoogleLogging(argv[0]);
-  step::Message::Init();
-  step::Message::set_default_version(kBeginString);
+  step::FieldMap::Init();
+  step::FieldMap::set_default_version(kBeginString);
   step::Logout msg(step::Logout::kOutOfSysOpenTime, "logout test");
 //  msg.set(34, 1);
 //  msg.set(35, "A");
@@ -43,7 +32,7 @@ int main(int argc, char **argv) {
     // 模拟从网络读取数据, 一次只读取一个字节
     decoder.Push(s.data() + (i % s.size()), 1);
     while (1) {
-      step::Message tmp;
+      step::FieldMap tmp;
       int ret = decoder.Parse(&tmp);
       if (ret == step::Decoder::SUCCESS) {
         printf("%s \n", escape(tmp.Encode()).c_str());

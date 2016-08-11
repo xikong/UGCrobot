@@ -6,27 +6,26 @@
  */
 
 #include "logon.h"
-#include "fix.h"
 
 namespace step {
 
 const char Logon::version_[] = "1.00";
 
-Logon::Logon() {
+Logon::Logon(FieldMap& field_map)
+    : Header(field_map) {
 }
 
 Logon::~Logon() {
 }
 
 std::string Logon::Encode() {
-  set(TAG_MSG_TYPE, kMsgTypeLogon);
-  if (NULL == get(TAG_ENCRYPT_METHOD)) {
-    set(TAG_ENCRYPT_METHOD, 0);
+  if (NULL == field_map_.get(TAG_ENCRYPT_METHOD)) {
+    field_map_.set(TAG_ENCRYPT_METHOD, 0);
   }
-  if (NULL == get(TAG_VERSION)) {
-    set(TAG_VERSION, version_);
+  if (NULL == field_map_.get(TAG_VERSION)) {
+    field_map_.set(TAG_VERSION, version_);
   }
-  return Message::Encode();
+  return field_map_.Encode();
 }
 
 } /* namespace stock_logic */

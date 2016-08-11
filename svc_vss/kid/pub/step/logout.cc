@@ -40,7 +40,7 @@ Logout::~Logout() {
 }
 
 std::string Logout::Encode() {
-  return Message::Encode();
+  return FieldMap::Encode();
 }
 
 } /* namespace step */

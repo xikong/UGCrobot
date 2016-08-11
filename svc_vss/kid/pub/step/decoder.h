@@ -2,7 +2,8 @@
 #define FIX_DECODER_H_
 
 #include <string>
-#include "message.h"
+
+#include "field_map.h"
 
 namespace step {
 
@@ -26,14 +27,13 @@ class Decoder {
   // 解析缓冲区中的数据, 如果解析出一个完整的 FIX 报文, 返回 1,
   // 如果数据不足一个报文, 返回 0, 你应该继续读取数据并压入解码器.
   // 如果出错(如系统错误), 返回 -1.
-  int Parse(Message *msg);
+  int Parse(FieldMap *msg);
  private:
   static const size_t BUFFER_SIZE = 20 * 1024 * 1024;
   std::string buffer_;
 };
 
 }
-;
 // namespace step
 
 #endif

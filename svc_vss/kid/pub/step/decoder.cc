@@ -4,8 +4,9 @@
 #include <boost/lexical_cast.hpp>
 
 #include "glog/logging.h"
+
+#include "step.h"
 #include "utils/strings.h"
-#include "fix.h"
 
 namespace step {
 
@@ -126,7 +127,7 @@ bool Decoder::IsFullStep() {
   return false;
 }
 
-int Decoder::Parse(Message *msg) {
+int Decoder::Parse(FieldMap *msg) {
   if (!IsFullStep()) {
     return PACKET_NOT_FULL;
   }
