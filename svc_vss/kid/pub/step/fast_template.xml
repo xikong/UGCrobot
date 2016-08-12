@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fast_templates ns="https://www.fixprotocol.org/ns/fast/td/1.1">
+      <templates ver="STEP1.20_SZ_1.00">
+        <template id="4101" name="Snapshot" step_id="W">
+          <int64 id="42" presence="mandatory" name="OrigTime" sub_type="timestamp" style="CCYYMMDDHHMMSSsss">
+            <delta dictionary="global" key="42" />
+          </int64>
+          <uInt32 id="10201" presence="mandatory" name="ChannelNo">
+            <copy dictionary="global" key="10201"/>
+          </uInt32>
+          <string id="1500" presence="mandatory" name="MDStreamID">
+            <copy dictionary="global" key="1500"/>
+          </string>
+          <string   id="48"    presence="mandatory" name="SecurityID"/>
+          <string   id="22"    presence="mandatory" name="SecurityIDSource"/>
+          <string   id="8538"  presence="mandatory" name="TradingPhaseCode">
+            <copy dictionary="global" key="8538"/>
+          </string>
+          <int64    id="140"   presence="mandatory" name="PreClosePx"          sub_type="float" precision="4" />
+          <int64    id="8503"  presence="mandatory" name="NumTrades"           />
+          <int64    id="387"   presence="mandatory" name="TotalVolumeTrade"    sub_type="float" precision="2" />
+          <int64    id="8504"  presence="mandatory" name="TotalValueTrade"     sub_type="float" precision="4" />
+          <uInt32   id="10207" presence="optional"  name="StockNum"            />
+          <sequence id="268" presence="optional"  name="NoMDEntries">
+            <string   id="269"  presence="mandatory" name="MDEntryType"/>
+            <int64    id="270"  presence="optional"  name="MDEntryPx"     sub_type="float" precision="6" />
+            <int64    id="271"  presence="optional"  name="MDEntrySize"   sub_type="float" precision="2" />
+            <uInt32   id="1023" presence="optional"  name="MDPriceLevel"  />
+            <int64    id="346"  presence="optional"  name="NumOfOrders"   />
+            <sequence id="73"   presence="optional"  name="NoOrders">
+              <int64 id="38" presence="optional" name="OrderQty" sub_type="float" precision="2" />
+            </sequence>
+          </sequence>
+        </template>
+        <template id="4201" name="TickOrder" step_id="UA201">
+          <uInt32 id="10201" presence="mandatory" name="ChannelNo">
+            <copy dictionary="global" key="10201"/>
+          </uInt32>
+          <int64 id="1181" presence="mandatory" name="ApplSeqNum">
+            <increment dictionary="global" key="1181" />
+          </int64>
+          <string id="1500" presence="mandatory" name="MDStreamID">
+            <copy dictionary="global" key="1500"/>
+          </string>
+          <string id="48"   presence="mandatory" name="SecurityID"        />
+          <string id="22"   presence="mandatory" name="SecurityIDSource"  />
+          <int64  id="44"   presence="mandatory" name="Price"             sub_type="float"     precision="4"              />
+          <int64  id="38"   presence="mandatory" name="OrderQty"          sub_type="float"     precision="2"              />
+          <string id="54"   presence="mandatory" name="Side"              />
+          <string id="40"   presence="optional" name="OrdType"           />
+          <string id="664"  presence="optional"  name="ConfirmId"         />
+          <uInt32 id="8911" presence="optional"  name="ExpirationDays"/>
+          <uInt32 id="8906" presence="optional"  name="ExpirationType"/>
+          <int64 id="60"   presence="mandatory" name="TransacTime"       sub_type="timestamp" style="CCYYMMDDHHMMSSsss">
+            <delta dictionary="global" key="60" />
+          </int64>
+          <string id="10184"   presence="optional"  name="Contactor"   charset="unicode"             />
+          <string id="10185"   presence="optional"  name="ContactInfo" charset="unicode"               />
+        </template>
+        <template id="4202" name="TickExecution" step_id="UA202">
+          <uInt32 id="10201" presence="mandatory" name="ChannelNo">
+            <copy dictionary="global" key="10201"/>
+          </uInt32>
+          <int64 id="1181" presence="mandatory" name="ApplSeqNum">
+            <increment dictionary="global" key="1181" />
+          </int64>
+          <string id="1500" presence="mandatory" name="MDStreamID">
+            <copy dictionary="global" key="1500"/>
+          </string>
+          <int64  id="10116" presence="optional"  name="BidApplSeqNum"/>
+          <int64  id="10117" presence="optional"  name="OfferApplSeqNum"/>
+          <string id="48"    presence="mandatory" name="SecurityID"/>
+          <string id="22"    presence="mandatory" name="SecurityIDSource"/>
+          <int64  id="31"    presence="optional"  name="LastPx"             sub_type="float"     precision="4"              />
+          <int64  id="32"    presence="mandatory" name="LastQty"            sub_type="float"     precision="2"              />
+          <string id="150"   presence="mandatory" name="ExecType"           />
+          <int64 id="60"    presence="mandatory" name="TransacTime"        sub_type="timestamp" style="CCYYMMDDHHMMSSsss">
+            <delta dictionary="global" key="60" />
+          </int64>
+        </template>
+        <template   id="3001" name="ChannelHeartbeat"     step_id="UA001">
+          <uInt32 id="10201" presence="mandatory" name="ChannelNo"      />
+          <int64  id="1350"  presence="mandatory" name="ApplLastSeqNum" />
+          <string id="10205" presence="optional"  name="EndOfChannel"   />
+        </template>
+        <template   id="3002" name="ResendRequest"    step_id="UA002">
+          <uInt32 id="10077" presence="mandatory" name="ResendType"    />
+          <uInt32 id="10201" presence="mandatory"  name="ChannelNo"     />
+          <int64  id="1182"  presence="optional"  name="ApplBegSeqNum" />
+          <int64  id="1183"  presence="optional"  name="ApplEndSeqNum" />
+          <string id="1472"  presence="optional"  name="NewsID"        />
+          <uInt32 id="10076" presence="optional"  name="ResendStatus"  />
+          <string id="58"    presence="optional"  name="Text"          />
+        </template>
+        <template   id="3003" name="UserReport"       step_id="UA003">
+          <int64 id="42" presence="mandatory" name="OrigTime" sub_type="timestamp" style="CCYYMMDDHHMMSSsss"/>
+          <string id="8934" presence="mandatory"  name="VersionCode"  />
+          <uInt32 id="8935" presence="mandatory"  name="UserNum"  />
+        </template>
+        <template   id="3004" name="SnapshotStat" step_id="UA004">
+          <int64 id="42" presence="mandatory" name="OrigTime" sub_type="timestamp" style="CCYYMMDDHHMMSSsss">
+              <delta dictionary="global" key="42" />
+          </int64>
+          <uInt32 id="10201" presence="mandatory"  name="ChannelNo"     />
+          <sequence id="10208" presence="mandatory" name="NoMDStreamID"  >
+            <string id="1500" presence="mandatory" name="MDStreamID">
+                <copy dictionary="global" key="1500"/>
+            </string>
+            <uInt32   id="10207" presence="optional"  name="StockNum"            />
+            <string   id="8538"  presence="mandatory" name="TradingPhaseCode">
+               <copy dictionary="global" key="8538"/>
+            </string>
+          </sequence>
+        </template>
+        <template   id="3008" name="Reject"           step_id="j">
+          <int64  id="45"   presence="optional"    name="RefSeqNum"         />
+          <string id="372"  presence="mandatory"   name="RefMsgType"        />
+          <string id="379"  presence="optional"    name="BusinessRejectRefID"        />
+          <uInt32 id="380"  presence="mandatory"   name="BusinessRejectReason"       />
+          <string id="58"   presence="optional"    name="Text"    />
+        </template>
+        <!-- 1411 version added message  -->
+        <template   id="4001" name="SecurityRealtimeStatus" step_id="f">
+          <int64 id="42"      presence="mandatory" name="OrigTime" sub_type="timestamp" style="CCYYMMDDHHMMSSsss">
+            <delta dictionary="template" key="42" />
+          </int64>
+          <uInt32 id="10201"   presence="mandatory" name="ChannelNo">
+            <copy dictionary="template" key="10201"/>
+          </uInt32>
+          <string   id="48"    presence="mandatory" name="SecurityID"       />
+          <string   id="22"    presence="mandatory" name="SecurityIDSource" />
+          <string   id="291"  presence="optional" name="FinancialStatus"  />
+          <sequence id="10202" presence="optional" name="NoSwitch"         >
+            <uInt32 id="10203"    presence="mandatory" name="SecuritySwitchType" />
+            <string id="10204"    presence="mandatory" name="SecuritySwitchStatus" />
+          </sequence>
+        </template>
+        <template    id="4002" name="News"             step_id="B">
+          <int64     id="42"    presence="optional"   name="OrigTime"  sub_type="timestamp" style="CCYYMMDDHHMMSSsss" />
+          <uInt32 id="10201"   presence="mandatory" name="ChannelNo">
+            <copy dictionary="template" key="10201"/>
+          </uInt32>
+          <string    id="1472"  presence="optional"   name="NewsID"    />
+          <!-- 1411 version change ascii string to unicode string -->
+          <string    id="148"   presence="mandatory"  name="Headline" charset="unicode"/>
+          <string    id="10209" presence="mandatory"  name="RawDataFormat"    />
+          <byteVector id="96"    presence="mandatory" name="RawData"/>
+        </template>
+		<template id="4003" name="MarketRealtimeStatus"  step_id="h" >
+          <int64 id="42"       presence="mandatory" name="OrigTime" sub_type="timestamp" style="CCYYMMDDHHMMSSsss">
+            <delta dictionary="template" key="42" />
+          </int64>
+          <uInt32 id="10201"   presence="mandatory" name="ChannelNo">
+            <copy dictionary="template" key="10201"/>
+          </uInt32>
+          <string id="1301"  presence="mandatory" name="MarketId" />
+          <string id="1300"  presence="mandatory" name="MarketSegmentId" />
+          <string id="336"   presence="mandatory" name="TradingSessionId" />
+          <string id="625"   presence="optional" name="TradingSessionSubId" />
+          <uInt32 id="340"   presence="optional" name="TradeSessionStatus" />
+          <int64  id="341"   presence="optional" name="TradeSessionStartTime" sub_type="timestamp" style="CCYYMMDDHHMMSSsss" />
+          <int64  id="345"   presence="optional" name="TradeSessionEndTime"   sub_type="timestamp" style="CCYYMMDDHHMMSSsss" />
+          <int64  id="834"   presence="optional" name="ThresholdAmount"       sub_type="float"     precision="4"             />
+          <int64  id="708"   presence="optional" name="PosAmt"                sub_type="float"     precision="4" />
+          <string id="10210" presence="optional" name="AmountStatus" />
+        </template>
+      </templates>
+</fast_templates>

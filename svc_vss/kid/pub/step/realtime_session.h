@@ -13,6 +13,7 @@
 
 #include "session.h"
 #include "decoder.h"
+#include "fast/mfast.h"
 
 namespace step {
 
@@ -26,15 +27,25 @@ class RealtimeSession : public Session {
   virtual bool OnConnect(int sock);
   virtual bool OnDisconnect();
   virtual bool OnReceive(const char* buf, size_t len);
- public:
+ private:
   void OnLogon();
   void OnLogout();
   void OnHeartbeat();
   void OnSysParam();
   void OnStockInfo();
+  void OnStockStatus();
+  void OnSnapshot();
+  void OnIndex();
+  void OnOrder();
+  void OnTrade();
+  void OnBulletin();
+  void OnInformation();
+  void OnResend();
  private:
   MsgHandler msg_handler_;
   Decoder step_decoder_;
+  mfast::fast_decoder fast_decoder_;
+
   FieldMap msg_;
   int heart_int_;  // 心跳间隔
   int max_fail_int_;  // 最大连续心跳监测失败次数

@@ -96,6 +96,12 @@ void RealtimeSession::OnSysParam() {
 }
 
 void RealtimeSession::OnStockInfo() {
-
+  const std::string* data = msg_.get(TAG_RAW_DATA);
+  const char* first = data->c_str();
+  const char* last = first + data->size();
+  while (first < last) {
+    mfast::message_cref msg = fast_decoder_.decode(first, last, true);
+  }
 }
+
 } /* namespace step */
